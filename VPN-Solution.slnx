@@ -1,0 +1,7 @@
+<Solution>
+  <Project Path="VPN.Client.UI/VPN.Client.UI.csproj" />
+  <Project Path="VPN.Client/VPN.Client.csproj" />
+  <Project Path="VPN.Core/VPN.Core.csproj" />
+  <Project Path="VPN.Server.Dashboard/VPN.Server.Dashboard.csproj" />
+  <Project Path="VPN.Server/VPN.Server.csproj" />
+</Solution>
