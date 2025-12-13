@@ -4,7 +4,16 @@ using System.Text;
 
 namespace VPN.Client
 {
-    internal class VpnClient
+    public class VpnClient
     {
+        public void Connect()
+        {
+            Console.WriteLine("VPN Client - Connecting...");
+        }
+
+        public void Disconnect()
+        {
+            Console.WriteLine("VPN Client - Disconnecting...");
+        }
     }
 }
