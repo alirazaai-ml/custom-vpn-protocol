@@ -5,8 +5,780 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:VPN.Client.UI"
         mc:Ignorable="d"
-        Title="MainWindow" Height="450" Width="800">
-    <Grid>
+        Title="VPN Client Control Panel" 
+        Height="650" 
+        Width="900"
+        WindowStartupLocation="CenterScreen"
+        Closing="Window_Closing">
 
+    <Window.Resources>
+        <!-- Color Palette -->
+        <SolidColorBrush x:Key="DarkPurple" Color="#4A148C"/>
+        <SolidColorBrush x:Key="Purple" Color="#7B1FA2"/>
+        <SolidColorBrush x:Key="LightPurple" Color="#9C27B0"/>
+        <SolidColorBrush x:Key="Green" Color="#00C853"/>
+        <SolidColorBrush x:Key="Red" Color="#FF5252"/>
+        <SolidColorBrush x:Key="Orange" Color="#FF9800"/>
+        <SolidColorBrush x:Key="Gray" Color="#9E9E9E"/>
+        <SolidColorBrush x:Key="LightGray" Color="#F5F5F5"/>
+        <SolidColorBrush x:Key="White" Color="#FFFFFF"/>
+        <SolidColorBrush x:Key="Black" Color="#212121"/>
+        <SolidColorBrush x:Key="Blue" Color="#2196F3"/>
+
+        <!-- Modern Card Style -->
+        <Style x:Key="ModernCard" TargetType="Border">
+            <Setter Property="Background" Value="{StaticResource White}"/>
+            <Setter Property="CornerRadius" Value="10"/>
+            <Setter Property="BorderBrush" Value="#E0E0E0"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Margin" Value="10"/>
+            <Setter Property="Padding" Value="20"/>
+            <Setter Property="Effect">
+                <Setter.Value>
+                    <DropShadowEffect ShadowDepth="3" BlurRadius="10" Opacity="0.1"/>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Button Styles -->
+        <Style x:Key="ConnectButton" TargetType="Button">
+            <Setter Property="Background" Value="{StaticResource Green}"/>
+            <Setter Property="Foreground" Value="{StaticResource White}"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+            <Setter Property="FontSize" Value="14"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Height" Value="45"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border Background="{TemplateBinding Background}" 
+                                CornerRadius="8"
+                                Padding="20,0">
+                            <ContentPresenter HorizontalAlignment="Center" 
+                                            VerticalAlignment="Center"/>
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Background" Value="#00B248"/>
+                </Trigger>
+                <Trigger Property="IsEnabled" Value="False">
+                    <Setter Property="Background" Value="#C8E6C9"/>
+                    <Setter Property="Foreground" Value="#81C784"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+
+        <Style x:Key="DisconnectButton" BasedOn="{StaticResource ConnectButton}" TargetType="Button">
+            <Setter Property="Background" Value="{StaticResource Red}"/>
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Background" Value="#FF3333"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+
+        <Style x:Key="SecondaryButton" TargetType="Button">
+            <Setter Property="Background" Value="{StaticResource LightGray}"/>
+            <Setter Property="Foreground" Value="{StaticResource Black}"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="BorderBrush" Value="#E0E0E0"/>
+            <Setter Property="Height" Value="35"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border Background="{TemplateBinding Background}" 
+                                CornerRadius="6"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                Padding="15,0">
+                            <ContentPresenter HorizontalAlignment="Center" 
+                                            VerticalAlignment="Center"/>
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Background" Value="#E0E0E0"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+
+        <!-- Status Indicator -->
+        <Style x:Key="StatusIndicator" TargetType="Ellipse">
+            <Setter Property="Width" Value="12"/>
+            <Setter Property="Height" Value="12"/>
+            <Setter Property="Margin" Value="0,0,8,0"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+        </Style>
+
+        <!-- Header Text -->
+        <Style x:Key="HeaderText" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="18"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Foreground" Value="{StaticResource Black}"/>
+            <Setter Property="Margin" Value="0,0,0,15"/>
+        </Style>
+
+        <!-- Section Text -->
+        <Style x:Key="SectionText" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="11"/>
+            <Setter Property="Foreground" Value="{StaticResource Gray}"/>
+            <Setter Property="FontWeight" Value="Medium"/>
+            <Setter Property="Margin" Value="0,0,0,5"/>
+        </Style>
+
+        <!-- Metric Value -->
+        <Style x:Key="MetricValue" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="24"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+            <Setter Property="Foreground" Value="{StaticResource Black}"/>
+        </Style>
+
+        <!-- Sub Metric -->
+        <Style x:Key="SubMetric" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="Foreground" Value="{StaticResource Gray}"/>
+        </Style>
+
+        <!-- Circular ProgressBar Style -->
+        <Style x:Key="CircularProgress" TargetType="ProgressBar">
+            <Setter Property="Width" Value="80"/>
+            <Setter Property="Height" Value="80"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ProgressBar">
+                        <Grid>
+                            <Ellipse Stroke="{StaticResource LightGray}" StrokeThickness="8"/>
+                            <Ellipse Stroke="{StaticResource Green}" StrokeThickness="8"
+                                     StrokeDashArray="0,2"
+                                     StrokeDashCap="Round"
+                                     RenderTransformOrigin="0.5,0.5">
+                                <Ellipse.RenderTransform>
+                                    <RotateTransform Angle="-90"/>
+                                </Ellipse.RenderTransform>
+                                <Ellipse.Style>
+                                    <Style TargetType="Ellipse">
+                                        <Setter Property="StrokeDashArray" Value="0,2"/>
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding RelativeSource={RelativeSource AncestorType=ProgressBar}, Path=Value}" Value="0">
+                                                <Setter Property="StrokeDashArray" Value="0,100"/>
+                                            </DataTrigger>
+                                            <DataTrigger Binding="{Binding RelativeSource={RelativeSource AncestorType=ProgressBar}, Path=Value}" Value="100">
+                                                <Setter Property="StrokeDashArray" Value="100,0"/>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </Ellipse.Style>
+                            </Ellipse>
+                            <TextBlock Text="{Binding RelativeSource={RelativeSource AncestorType=ProgressBar}, Path=Value, StringFormat={}{0:0}%}"
+                                       HorizontalAlignment="Center"
+                                       VerticalAlignment="Center"
+                                       FontWeight="Bold"
+                                       FontSize="18"
+                                       Foreground="{StaticResource Black}"/>
+                        </Grid>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </Window.Resources>
+
+    <Grid Background="{StaticResource LightGray}">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- Header -->
+        <Border Grid.Row="0" Background="{StaticResource DarkPurple}" Padding="25">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+
+                <!-- Logo -->
+                <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
+                    <Border Background="{StaticResource LightPurple}" 
+                            Width="44" 
+                            Height="44" 
+                            CornerRadius="22">
+                        <TextBlock Text="🔐" 
+                                   FontSize="22" 
+                                   HorizontalAlignment="Center" 
+                                   VerticalAlignment="Center"/>
+                    </Border>
+                    <StackPanel Margin="15,0,0,0">
+                        <TextBlock Text="VPN CLIENT" 
+                                   FontSize="22" 
+                                   FontWeight="Bold" 
+                                   Foreground="{StaticResource White}"/>
+                        <TextBlock Text="Secure Connection Manager" 
+                                   FontSize="12" 
+                                   Foreground="#D1C4E9"/>
+                    </StackPanel>
+                </StackPanel>
+
+                <!-- Connection Status -->
+                <Border Grid.Column="1" 
+                        HorizontalAlignment="Center" 
+                        VerticalAlignment="Center"
+                        Background="#311B92"
+                        CornerRadius="20"
+                        Padding="25,12">
+                    <StackPanel Orientation="Horizontal">
+                        <Ellipse x:Name="indConnectionStatus" 
+                                 Width="14" 
+                                 Height="14" 
+                                 Fill="{StaticResource Red}" 
+                                 Margin="0,0,12,0"/>
+                        <StackPanel>
+                            <TextBlock x:Name="txtConnectionStatus" 
+                                       Text="DISCONNECTED" 
+                                       Foreground="{StaticResource White}" 
+                                       FontWeight="Bold"
+                                       FontSize="16"/>
+                            <TextBlock x:Name="txtServerInfo" 
+                                       Text="Not connected to any server" 
+                                       Foreground="#B39DDB" 
+                                       FontSize="11"/>
+                        </StackPanel>
+                    </StackPanel>
+                </Border>
+
+                <!-- Session Info -->
+                <StackPanel Grid.Column="2" HorizontalAlignment="Right" VerticalAlignment="Center">
+                    <TextBlock Text="SESSION TIME" 
+                               FontSize="10" 
+                               Foreground="#B39DDB" 
+                               HorizontalAlignment="Right"/>
+                    <TextBlock x:Name="txtSessionTime" 
+                               Text="00:00:00" 
+                               FontSize="22" 
+                               FontWeight="Bold" 
+                               Foreground="{StaticResource White}" 
+                               HorizontalAlignment="Right"/>
+                    <TextBlock x:Name="txtSessionDate" 
+                               Text="--/--/----" 
+                               FontSize="10" 
+                               Foreground="#B39DDB" 
+                               HorizontalAlignment="Right"/>
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <!-- Main Content -->
+        <Grid Grid.Row="1" Margin="15">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="1.5*"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+
+            <!-- Left Panel - Connection & Traffic -->
+            <StackPanel Grid.Column="0">
+                <!-- Connection Control Card -->
+                <Border Style="{StaticResource ModernCard}">
+                    <StackPanel>
+                        <TextBlock Text="CONNECTION CONTROL" Style="{StaticResource HeaderText}"/>
+
+                        <!-- Server Configuration -->
+                        <Grid Margin="0,0,0,20">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                            </Grid.RowDefinitions>
+
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+
+                            <!-- Server Address -->
+                            <StackPanel Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="2" Margin="0,0,0,15">
+                                <TextBlock Text="SERVER ADDRESS" Style="{StaticResource SectionText}"/>
+                                <Border CornerRadius="8" BorderBrush="#E0E0E0" BorderThickness="2">
+                                    <TextBox x:Name="txtServerAddress" 
+                                             Text="127.0.0.1" 
+                                             Height="40" 
+                                             Padding="15" 
+                                             FontSize="14"
+                                             BorderThickness="0"/>
+                                </Border>
+                            </StackPanel>
+
+                            <!-- Port -->
+                            <StackPanel Grid.Row="0" Grid.Column="2" Margin="15,0,0,15">
+                                <TextBlock Text="PORT" Style="{StaticResource SectionText}"/>
+                                <Border CornerRadius="8" BorderBrush="#E0E0E0" BorderThickness="2">
+                                    <TextBox x:Name="txtPort" 
+                                             Text="5000" 
+                                             Height="40" 
+                                             Width="100"
+                                             Padding="15" 
+                                             FontSize="14"
+                                             BorderThickness="0"/>
+                                </Border>
+                            </StackPanel>
+
+                            <!-- Username -->
+                            <StackPanel Grid.Row="1" Grid.Column="0" Margin="0,0,10,15">
+                                <TextBlock Text="USERNAME" Style="{StaticResource SectionText}"/>
+                                <Border CornerRadius="8" BorderBrush="#E0E0E0" BorderThickness="2">
+                                    <TextBox x:Name="txtUsername" 
+                                             Text="vpn_user" 
+                                             Height="40" 
+                                             Padding="15" 
+                                             FontSize="14"
+                                             BorderThickness="0"/>
+                                </Border>
+                            </StackPanel>
+
+                            <!-- Password -->
+                            <StackPanel Grid.Row="1" Grid.Column="1" Grid.ColumnSpan="2" Margin="0,0,0,15">
+                                <TextBlock Text="PASSWORD" Style="{StaticResource SectionText}"/>
+                                <Border CornerRadius="8" BorderBrush="#E0E0E0" BorderThickness="2">
+                                    <PasswordBox x:Name="txtPassword" 
+                                                 Height="40" 
+                                                 Padding="15" 
+                                                 FontSize="14"
+                                                 BorderThickness="0"/>
+                                </Border>
+                            </StackPanel>
+
+                            <!-- Connection Buttons -->
+                            <StackPanel Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="3" 
+                                        Orientation="Horizontal" 
+                                        HorizontalAlignment="Center"
+                                        Margin="0,10,0,0">
+                                <Button x:Name="btnConnect" 
+                                        Content="🔒 CONNECT TO VPN" 
+                                        Style="{StaticResource ConnectButton}"
+                                        Width="220"
+                                        Click="btnConnect_Click"/>
+
+                                <Button x:Name="btnDisconnect" 
+                                        Content="✖ DISCONNECT" 
+                                        Style="{StaticResource DisconnectButton}"
+                                        Width="180"
+                                        Margin="20,0,0,0"
+                                        IsEnabled="False"
+                                        Click="btnDisconnect_Click"/>
+                            </StackPanel>
+                        </Grid>
+
+                        <!-- Quick Actions -->
+                        <Expander Header="Quick Actions" Margin="0,10,0,0">
+                            <StackPanel Margin="0,15,0,0">
+                                <WrapPanel>
+                                    <Button Content="Test Connection" 
+                                            Style="{StaticResource SecondaryButton}"
+                                            Margin="0,0,10,10"
+                                            Click="btnTestConnection_Click"/>
+                                    <Button Content="Ping Server" 
+                                            Style="{StaticResource SecondaryButton}"
+                                            Margin="0,0,10,10"
+                                            Click="btnPingServer_Click"/>
+                                    <Button Content="Check Encryption" 
+                                            Style="{StaticResource SecondaryButton}"
+                                            Margin="0,0,10,10"
+                                            Click="btnCheckEncryption_Click"/>
+                                    <Button Content="Speed Test" 
+                                            Style="{StaticResource SecondaryButton}"
+                                            Margin="0,0,10,10"
+                                            Click="btnSpeedTest_Click"/>
+                                    <Button Content="Reconnect" 
+                                            Style="{StaticResource SecondaryButton}"
+                                            Margin="0,0,10,10"
+                                            Click="btnReconnect_Click"/>
+                                </WrapPanel>
+                            </StackPanel>
+                        </Expander>
+                    </StackPanel>
+                </Border>
+
+                <!-- Traffic Statistics Card -->
+                <Border Style="{StaticResource ModernCard}" Margin="0,10,0,0">
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="*"/>
+                        </Grid.RowDefinitions>
+
+                        <TextBlock Text="TRAFFIC STATISTICS" Style="{StaticResource HeaderText}"/>
+
+                        <!-- Traffic Grid -->
+                        <Grid Grid.Row="1">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                            </Grid.RowDefinitions>
+
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+
+                            <!-- Upload Speed -->
+                            <Border Grid.Row="0" Grid.Column="0" 
+                                    Background="#F3E5F5" 
+                                    CornerRadius="8" 
+                                    Padding="15" 
+                                    Margin="0,0,10,10">
+                                <StackPanel>
+                                    <TextBlock Text="UPLOAD SPEED" Style="{StaticResource SectionText}"/>
+                                    <TextBlock x:Name="txtUploadSpeed" Text="0 KB/s" Style="{StaticResource MetricValue}"/>
+                                    <TextBlock x:Name="txtUploadTotal" Text="0 MB total" Style="{StaticResource SubMetric}"/>
+                                    <ProgressBar x:Name="pbUpload" 
+                                                 Height="6" 
+                                                 Margin="0,8,0,0"
+                                                 Foreground="{StaticResource Purple}"/>
+                                </StackPanel>
+                            </Border>
+
+                            <!-- Download Speed -->
+                            <Border Grid.Row="0" Grid.Column="1" 
+                                    Background="#E8F5E8" 
+                                    CornerRadius="8" 
+                                    Padding="15" 
+                                    Margin="0,0,10,10">
+                                <StackPanel>
+                                    <TextBlock Text="DOWNLOAD SPEED" Style="{StaticResource SectionText}"/>
+                                    <TextBlock x:Name="txtDownloadSpeed" Text="0 KB/s" Style="{StaticResource MetricValue}"/>
+                                    <TextBlock x:Name="txtDownloadTotal" Text="0 MB total" Style="{StaticResource SubMetric}"/>
+                                    <ProgressBar x:Name="pbDownload" 
+                                                 Height="6" 
+                                                 Margin="0,8,0,0"
+                                                 Foreground="{StaticResource Green}"/>
+                                </StackPanel>
+                            </Border>
+
+                            <!-- Latency -->
+                            <Border Grid.Row="0" Grid.Column="2" 
+                                    Background="#E3F2FD" 
+                                    CornerRadius="8" 
+                                    Padding="15" 
+                                    Margin="0,0,0,10">
+                                <StackPanel>
+                                    <TextBlock Text="LATENCY" Style="{StaticResource SectionText}"/>
+                                    <TextBlock x:Name="txtLatency" Text="-- ms" Style="{StaticResource MetricValue}"/>
+                                    <TextBlock Text="ping response" Style="{StaticResource SubMetric}"/>
+                                    <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
+                                        <Ellipse x:Name="indLatency" 
+                                                 Width="8" 
+                                                 Height="8" 
+                                                 Fill="{StaticResource Gray}" 
+                                                 Margin="0,0,5,0"/>
+                                        <TextBlock x:Name="txtLatencyStatus" Text="Unknown" 
+                                                   Style="{StaticResource SubMetric}"/>
+                                    </StackPanel>
+                                </StackPanel>
+                            </Border>
+
+                            <!-- Data Transferred -->
+                            <Border Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="3"
+                                    Background="#FFF3E0" 
+                                    CornerRadius="8" 
+                                    Padding="15" 
+                                    Margin="0,0,0,10">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+
+                                    <StackPanel Grid.Column="0">
+                                        <TextBlock Text="DATA TRANSFERRED" Style="{StaticResource SectionText}"/>
+                                        <TextBlock x:Name="txtDataTransferred" Text="0 MB" 
+                                                   FontSize="28" 
+                                                   FontWeight="Bold"
+                                                   Foreground="{StaticResource Black}"/>
+                                    </StackPanel>
+
+                                    <StackPanel Grid.Column="1" HorizontalAlignment="Center">
+                                        <TextBlock Text="SESSION DATA" Style="{StaticResource SectionText}"/>
+                                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                                            <TextBlock Text="⬆ " Style="{StaticResource MetricValue}" Foreground="{StaticResource Purple}"/>
+                                            <TextBlock x:Name="txtSessionUpload" Text="0 MB" Style="{StaticResource MetricValue}"/>
+                                            <TextBlock Text=" / " Style="{StaticResource MetricValue}" Foreground="{StaticResource Gray}"/>
+                                            <TextBlock Text="⬇ " Style="{StaticResource MetricValue}" Foreground="{StaticResource Green}"/>
+                                            <TextBlock x:Name="txtSessionDownload" Text="0 MB" Style="{StaticResource MetricValue}"/>
+                                        </StackPanel>
+                                    </StackPanel>
+
+                                    <StackPanel Grid.Column="2">
+                                        <Button Content="⟳ Reset Stats" 
+                                                Style="{StaticResource SecondaryButton}"
+                                                Click="btnResetStats_Click"/>
+                                    </StackPanel>
+                                </Grid>
+                            </Border>
+
+                            <!-- Connection Graph -->
+                            <Border Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="3"
+                                    BorderBrush="#E0E0E0" 
+                                    BorderThickness="1" 
+                                    CornerRadius="8" 
+                                    Padding="15" 
+                                    Background="{StaticResource White}">
+                                <StackPanel>
+                                    <TextBlock Text="CONNECTION GRAPH" Style="{StaticResource SectionText}"/>
+                                    <Border Height="100" 
+                                            BorderBrush="#E0E0E0" 
+                                            BorderThickness="1" 
+                                            CornerRadius="4"
+                                            Background="#FAFAFA">
+                                        <Canvas x:Name="cnvGraph">
+                                            <!-- Graph will be drawn here -->
+                                        </Canvas>
+                                    </Border>
+                                    <StackPanel Orientation="Horizontal" Margin="0,10,0,0">
+                                        <TextBlock Text="Real-time bandwidth visualization" 
+                                                   Style="{StaticResource SubMetric}"/>
+                                        <TextBlock Text=" | " 
+                                                   Style="{StaticResource SubMetric}" 
+                                                   Margin="5,0,5,0"/>
+                                        <TextBlock x:Name="txtGraphStatus" Text="No data" 
+                                                   Style="{StaticResource SubMetric}"/>
+                                    </StackPanel>
+                                </StackPanel>
+                            </Border>
+                        </Grid>
+                    </Grid>
+                </Border>
+            </StackPanel>
+
+            <!-- Right Panel - Status & Logs -->
+            <Grid Grid.Column="1" Margin="10,0,0,0">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+
+                <!-- Connection Status Card -->
+                <Border Grid.Row="0" Style="{StaticResource ModernCard}">
+                    <StackPanel>
+                        <TextBlock Text="CONNECTION STATUS" Style="{StaticResource HeaderText}"/>
+
+                        <!-- Circular Connection Progress -->
+                        <StackPanel HorizontalAlignment="Center" Margin="0,0,0,20">
+                            <ProgressBar x:Name="pbConnection" 
+                                         Style="{StaticResource CircularProgress}"
+                                         Value="0"
+                                         Minimum="0"
+                                         Maximum="100"/>
+                            <TextBlock x:Name="txtConnectionPhase" 
+                                       Text="Ready to connect" 
+                                       HorizontalAlignment="Center" 
+                                       Margin="0,15,0,0"
+                                       FontWeight="SemiBold"/>
+                        </StackPanel>
+
+                        <!-- Connection Details -->
+                        <Grid>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                            </Grid.RowDefinitions>
+
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+
+                            <!-- Encryption -->
+                            <Border Grid.Row="0" Grid.Column="0" 
+                                    Background="#F5F5F5" 
+                                    CornerRadius="6" 
+                                    Padding="10" 
+                                    Margin="0,0,5,10">
+                                <StackPanel>
+                                    <TextBlock Text="ENCRYPTION" Style="{StaticResource SectionText}"/>
+                                    <StackPanel Orientation="Horizontal">
+                                        <Ellipse x:Name="indEncryption" 
+                                                 Width="8" 
+                                                 Height="8" 
+                                                 Fill="{StaticResource Gray}" 
+                                                 Margin="0,0,5,0"/>
+                                        <TextBlock x:Name="txtEncryption" Text="None" 
+                                                   FontWeight="SemiBold"/>
+                                    </StackPanel>
+                                </StackPanel>
+                            </Border>
+
+                            <!-- Protocol -->
+                            <Border Grid.Row="0" Grid.Column="1" 
+                                    Background="#F5F5F5" 
+                                    CornerRadius="6" 
+                                    Padding="10" 
+                                    Margin="5,0,0,10">
+                                <StackPanel>
+                                    <TextBlock Text="PROTOCOL" Style="{StaticResource SectionText}"/>
+                                    <TextBlock x:Name="txtProtocol" Text="TCP" 
+                                               FontWeight="SemiBold"/>
+                                </StackPanel>
+                            </Border>
+
+                            <!-- Session ID -->
+                            <Border Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2"
+                                    Background="#F5F5F5" 
+                                    CornerRadius="6" 
+                                    Padding="10" 
+                                    Margin="0,0,0,10">
+                                <StackPanel>
+                                    <TextBlock Text="SESSION ID" Style="{StaticResource SectionText}"/>
+                                    <TextBox x:Name="txtSessionId" 
+                                             Text="Not connected" 
+                                             IsReadOnly="True" 
+                                             BorderThickness="0" 
+                                             Background="Transparent"
+                                             FontFamily="Consolas"
+                                             FontSize="11"/>
+                                </StackPanel>
+                            </Border>
+
+                            <!-- Server Details -->
+                            <Border Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="2"
+                                    Background="#F5F5F5" 
+                                    CornerRadius="6" 
+                                    Padding="10">
+                                <StackPanel>
+                                    <TextBlock Text="SERVER DETAILS" Style="{StaticResource SectionText}"/>
+                                    <TextBlock x:Name="txtServerDetails" 
+                                               Text="No server connected" 
+                                               TextWrapping="Wrap"/>
+                                </StackPanel>
+                            </Border>
+                        </Grid>
+                    </StackPanel>
+                </Border>
+
+                <!-- Activity Log Card -->
+                <Border Grid.Row="1" Style="{StaticResource ModernCard}" Margin="0,10,0,0">
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="*"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+
+                        <!-- Log Header -->
+                        <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,15">
+                            <TextBlock Text="ACTIVITY LOG" Style="{StaticResource HeaderText}"/>
+
+                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                                <ComboBox x:Name="cmbLogLevel" 
+                                          Width="100" 
+                                          Margin="0,0,10,0"
+                                          SelectedIndex="0">
+                                    <ComboBoxItem Content="All Levels"/>
+                                    <ComboBoxItem Content="Info Only"/>
+                                    <ComboBoxItem Content="Warnings"/>
+                                    <ComboBoxItem Content="Errors"/>
+                                </ComboBox>
+
+                                <Button Content="CLEAR" 
+                                        Style="{StaticResource SecondaryButton}"
+                                        Click="btnClearLog_Click"/>
+                            </StackPanel>
+                        </StackPanel>
+
+                        <!-- Log Content -->
+                        <Border Grid.Row="1" 
+                                BorderBrush="#E0E0E0" 
+                                BorderThickness="1" 
+                                CornerRadius="6" 
+                                Background="{StaticResource White}">
+                            <ScrollViewer x:Name="logScrollViewer" VerticalScrollBarVisibility="Auto">
+                                <TextBox x:Name="txtLog" 
+                                         IsReadOnly="True" 
+                                         BorderThickness="0" 
+                                         Background="Transparent"
+                                         FontFamily="Consolas, Courier New"
+                                         FontSize="11"
+                                         VerticalAlignment="Stretch"
+                                         TextWrapping="Wrap"
+                                         AcceptsReturn="True"
+                                         VerticalScrollBarVisibility="Hidden"
+                                         Text="[VPN Client Control Panel Started]&#x0a;Ready to establish secure connection..."/>
+                            </ScrollViewer>
+                        </Border>
+
+                        <!-- Log Footer -->
+                        <StackPanel Grid.Row="2" Orientation="Horizontal" Margin="0,10,0,0">
+                            <CheckBox x:Name="chkAutoScroll" 
+                                      Content="Auto-scroll" 
+                                      IsChecked="True" 
+                                      VerticalAlignment="Center"/>
+
+                            <TextBlock x:Name="txtLogEntries" 
+                                       Text="0 entries" 
+                                       Style="{StaticResource SubMetric}" 
+                                       Margin="15,0,0,0" 
+                                       VerticalAlignment="Center"/>
+
+                            <Button Content="EXPORT LOG" 
+                                    Style="{StaticResource SecondaryButton}"
+                                    Margin="15,0,0,0"
+                                    Click="btnExportLog_Click"/>
+                        </StackPanel>
+                    </Grid>
+                </Border>
+            </Grid>
+        </Grid>
+
+        <!-- Footer -->
+        <Border Grid.Row="2" 
+                Background="{StaticResource White}" 
+                BorderBrush="#E0E0E0" 
+                BorderThickness="1,0,0,0" 
+                Padding="20">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+
+                <StackPanel Grid.Column="0" Orientation="Horizontal">
+                    <TextBlock Text="🛡️ Secure VPN Client v1.0" 
+                               Foreground="{StaticResource Black}" 
+                               FontWeight="Medium"/>
+                    <TextBlock Text=" | " 
+                               Foreground="{StaticResource Gray}" 
+                               Margin="10,0,10,0"/>
+                    <TextBlock Text="Custom Protocol Project" 
+                               Foreground="{StaticResource Gray}"/>
+                    <TextBlock Text=" | " 
+                               Foreground="{StaticResource Gray}" 
+                               Margin="10,0,10,0"/>
+                    <TextBlock Text="Data encrypted end-to-end" 
+                               Foreground="{StaticResource Green}" 
+                               FontWeight="SemiBold"/>
+                </StackPanel>
+
+                <StackPanel Grid.Column="1" Orientation="Horizontal">
+                    <TextBlock Text="Last Update: " 
+                               Foreground="{StaticResource Gray}"/>
+                    <TextBlock x:Name="txtLastUpdate" 
+                               Text="--:--:--" 
+                               Foreground="{StaticResource Black}" 
+                               FontWeight="SemiBold"/>
+                </StackPanel>
+            </Grid>
+        </Border>
     </Grid>
 </Window>

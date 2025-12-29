@@ -4,7 +4,27 @@ using System.Text;
 
 namespace VPN.Core.Exceptions
 {
-    internal class EncryptionException
+    /// <summary>
+    /// Exception for encryption/decryption failures
+    /// </summary>
+    public class EncryptionException : VpnException
     {
+        public EncryptionException() : base("Encryption operation failed")
+        {
+        }
+
+        public EncryptionException(string message) : base(message)
+        {
+        }
+
+        public EncryptionException(string message, System.Exception innerException)
+            : base(message, innerException)
+        {
+        }
+
+        public EncryptionException(string message, int errorCode)
+            : base(message, errorCode)
+        {
+        }
     }
 }

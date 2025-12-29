@@ -10,7 +10,6 @@
 
   <ItemGroup>
     <ProjectReference Include="..\VPN.Core\VPN.Core.csproj" />
-    <ProjectReference Include="..\VPN.Server\VPN.Server.csproj" />
   </ItemGroup>
 
 </Project>
