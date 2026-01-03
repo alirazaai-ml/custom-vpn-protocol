@@ -101,6 +101,22 @@ namespace VPN.Core.Protocol
         }
 
         /// <summary>
+        /// Create an authentication packet
+        /// </summary>
+        public static VpnPacket CreateAuthenticationPacket(int sessionId, byte[] authData)
+        {
+            return new VpnPacket
+            {
+                Version = ProtocolConstants.PROTOCOL_VERSION,
+                Type = PacketType.Authentication,
+                SessionId = sessionId,
+                SequenceNumber = GetNextSequenceNumber(),
+                Payload = authData,
+                PayloadLength = (ushort)authData.Length
+            };
+        }
+
+        /// <summary>
         /// Create an error packet
         /// </summary>
         public static VpnPacket CreateErrorPacket(int sessionId, int errorCode, string message)
@@ -137,11 +153,6 @@ namespace VPN.Core.Protocol
         public static void ResetSequenceNumber()
         {
             _nextSequenceNumber = 1;
-        }
-
-        public static VpnPacket CreateErrorPacket(object value, int errorCode, string message)
-        {
-            throw new NotImplementedException();
         }
     }
 }

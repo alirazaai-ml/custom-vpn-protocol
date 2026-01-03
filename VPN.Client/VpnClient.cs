@@ -26,7 +26,7 @@ namespace VPN.Client
             _config = config ?? ClientConfiguration.LoadFromFile();
             _connectionManager = new ConnectionManager(_config);
             _tunnelManager = new TunnelManager(_connectionManager, _config);
-            _localProxy = new LocalProxy(_tunnelManager, _config);
+            _localProxy = new LocalProxy(_tunnelManager, _config.LocalProxyPort);
 
             // Subscribe to events
             _connectionManager.ConnectionStatusChanged += OnConnectionStatusChanged;
@@ -115,6 +115,47 @@ namespace VPN.Client
         }
 
         /// <summary>
+        /// Enable or disable auto-reconnect
+        /// </summary>
+        public void SetAutoReconnect(bool enabled)
+        {
+            _connectionManager.SetAutoReconnect(enabled);
+            Log($"Auto-reconnect {(enabled ? "enabled" : "disabled")}");
+        }
+
+        /// <summary>
+        /// Manually trigger reconnection
+        /// </summary>
+        public async Task<bool> ReconnectAsync()
+        {
+            Log("Initiating manual reconnection...");
+            
+            // Stop tunnel and proxy first
+            _tunnelManager.StopTunnel();
+            _localProxy.Stop();
+            
+            // Attempt reconnection
+            bool success = await _connectionManager.ReconnectAsync();
+            
+            if (success)
+            {
+                // Restart local proxy if it was enabled
+                if (_config.EnableLocalProxy)
+                {
+                    _localProxy.Start();
+                }
+                
+                Log("✅ Reconnection successful");
+            }
+            else
+            {
+                Log("❌ Reconnection failed");
+            }
+            
+            return success;
+        }
+
+        /// <summary>
         /// Start VPN tunnel
         /// </summary>
         public void StartTunnel()
@@ -193,7 +234,7 @@ namespace VPN.Client
             var proxyStats = _localProxy.IsRunning ? "Running" : "Stopped";
 
             var (bytesSent, bytesReceived, packetsSent, packetsReceived) = _tunnelManager.GetStatistics();
-            var (totalConnections, activeConnections) = _localProxy.GetStatistics();
+            int activeConnections = _localProxy.ActiveConnections;
 
             Console.WriteLine("\n=== VPN Client Information ===");
             Console.WriteLine($"Connection: {connectionStats}");
@@ -206,8 +247,8 @@ namespace VPN.Client
             Console.WriteLine($"  Packets Sent: {packetsSent:N0}");
             Console.WriteLine($"  Packets Received: {packetsReceived:N0}");
             Console.WriteLine($"\nProxy Statistics:");
-            Console.WriteLine($"  Total Connections: {totalConnections}");
             Console.WriteLine($"  Active Connections: {activeConnections}");
+            Console.WriteLine($"  Proxy Port: {_localProxy.ProxyPort}");
             Console.WriteLine("==============================\n");
         }
 

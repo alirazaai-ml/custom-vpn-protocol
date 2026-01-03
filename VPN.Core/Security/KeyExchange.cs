@@ -2,22 +2,21 @@
 using System.Security.Cryptography;
 using System.Text;
 using VPN.Core.Exceptions;
-using Microsoft.AspNetCore.Cryptography.KeyDerivation;
 
 namespace VPN.Core.Security
 {
     /// <summary>
-    /// Secure key exchange using Diffie-Hellman
+    /// Secure key exchange using ECDH (Elliptic Curve Diffie-Hellman)
     /// </summary>
     public class KeyExchange : IDisposable
     {
         private readonly ECDiffieHellman _dh;
-        private byte[] _publicKey;
+        private readonly byte[] _publicKey;
 
         public KeyExchange()
         {
-            _dh = ECDiffieHellman.Create(ECCurve.NamedCurves.nistP256); // Using P-256 curve
-            _publicKey = _dh.ExportSubjectPublicKeyInfo(); // FIXED: Use ExportSubjectPublicKeyInfo
+            _dh = ECDiffieHellman.Create(ECCurve.NamedCurves.nistP256); // P-256 curve (256-bit security)
+            _publicKey = _dh.ExportSubjectPublicKeyInfo();
         }
 
         /// <summary>
@@ -36,67 +35,94 @@ namespace VPN.Core.Security
                 using var otherParty = ECDiffieHellman.Create();
                 otherParty.ImportSubjectPublicKeyInfo(otherPartyPublicKey, out _);
 
-                // Derive the shared secret
-                byte[] sharedSecret = _dh.DeriveKeyFromHash(
+                // Derive the shared secret using SHA256 hash
+                return _dh.DeriveKeyFromHash(
                     otherParty.PublicKey,
                     HashAlgorithmName.SHA256,
                     null,
                     null);
-
-                return sharedSecret;
             }
-            catch (CryptographicException ex)
+            catch (Exception ex)
             {
-                throw new EncryptionException("Key exchange failed", ex);
+                throw new EncryptionException("Failed to derive shared secret", ex);
             }
         }
 
         /// <summary>
-        /// Create session key from shared secret using HKDF
+        /// Derive session key from shared secret using HKDF
         /// </summary>
-        public byte[] DeriveSessionKey(byte[] sharedSecret, string context = "VPN-Session-Key")
+        public byte[] DeriveSessionKey(byte[] sharedSecret, byte[] salt = null, string info = "VPN-Session-Key")
         {
             try
             {
-                // Use proper HKDF with the NuGet package
-                byte[] salt = Encoding.UTF8.GetBytes(context);
+                // Use HKDF to derive a secure session key from shared secret
+                // HKDF: HMAC-based Extract-and-Expand Key Derivation Function
 
-                byte[] sessionKey = KeyDerivation.Pbkdf2(
-                    password: Convert.ToBase64String(sharedSecret),
-                    salt: salt,
-                    prf: KeyDerivationPrf.HMACSHA256,
-                    iterationCount: 10000,
-                    numBytesRequested: 32); // 32 bytes = 256 bits for AES-256
+                // Step 1: Extract (if needed, but ECDH already gives good entropy)
+                // We'll skip extract phase as ECDH shared secret already has good entropy
+
+                // Step 2: Expand
+                using var hmac = new HMACSHA256(sharedSecret);
+
+                // Generate salt if not provided
+                if (salt == null || salt.Length == 0)
+                {
+                    salt = new byte[32];
+                    using var rng = RandomNumberGenerator.Create();
+                    rng.GetBytes(salt);
+                }
+
+                // HKDF Expand: T(0) = empty, T(i) = HMAC-Hash(PRK, T(i-1) | info | 0x01)
+                byte[] infoBytes = Encoding.UTF8.GetBytes(info);
+                byte[] counter = new byte[] { 0x01 }; // First iteration
+
+                byte[] dataToHash = CombineArrays(
+                    infoBytes,
+                    counter);
+
+                // First HMAC with salt as key
+                using var hmacWithSalt = new HMACSHA256(salt);
+                byte[] prk = hmacWithSalt.ComputeHash(sharedSecret);
+
+                // Expand using PRK
+                using var hmacWithPrk = new HMACSHA256(prk);
+                byte[] result = hmacWithPrk.ComputeHash(dataToHash);
+
+                // Take first 32 bytes for AES-256 key
+                byte[] sessionKey = new byte[32];
+                int bytesToCopy = Math.Min(result.Length, 32);
+                Buffer.BlockCopy(result, 0, sessionKey, 0, bytesToCopy);
 
                 return sessionKey;
             }
             catch (Exception ex)
             {
-                // Fallback to simple method if HKDF fails
-                return DeriveSessionKeySimple(sharedSecret, context);
+                // Fallback to simple KDF if HKDF fails
+                return DeriveSessionKeySimple(sharedSecret, info);
             }
         }
 
         /// <summary>
-        /// Fallback method if HKDF is not available
+        /// Simple KDF fallback using SHA256
         /// </summary>
-        private byte[] DeriveSessionKeySimple(byte[] sharedSecret, string context)
+        private byte[] DeriveSessionKeySimple(byte[] sharedSecret, string info)
         {
             try
             {
                 using var sha256 = SHA256.Create();
 
-                // Combine shared secret with context
-                byte[] salt = Encoding.UTF8.GetBytes(context);
-                byte[] combined = new byte[sharedSecret.Length + salt.Length];
+                // Combine shared secret with context info
+                byte[] infoBytes = Encoding.UTF8.GetBytes(info);
+                byte[] combined = new byte[sharedSecret.Length + infoBytes.Length];
 
                 Buffer.BlockCopy(sharedSecret, 0, combined, 0, sharedSecret.Length);
-                Buffer.BlockCopy(salt, 0, combined, sharedSecret.Length, salt.Length);
+                Buffer.BlockCopy(infoBytes, 0, combined, sharedSecret.Length, infoBytes.Length);
 
-                // Hash to derive key
+                // Hash multiple times for better key derivation
                 byte[] keyMaterial = sha256.ComputeHash(combined);
+                keyMaterial = sha256.ComputeHash(keyMaterial); // Second round
 
-                // Ensure we have 32 bytes for AES-256
+                // Ensure 32 bytes for AES-256
                 byte[] sessionKey = new byte[32];
                 int bytesToCopy = Math.Min(keyMaterial.Length, 32);
                 Buffer.BlockCopy(keyMaterial, 0, sessionKey, 0, bytesToCopy);
@@ -110,33 +136,23 @@ namespace VPN.Core.Security
         }
 
         /// <summary>
-        /// Generate IV for AES encryption
+        /// Complete key exchange: derive session key from other party's public key
         /// </summary>
-        public byte[] GenerateIV()
-        {
-            using var rng = RandomNumberGenerator.Create();
-            byte[] iv = new byte[16]; // 16 bytes for AES IV
-            rng.GetBytes(iv);
-            return iv;
-        }
-
-        /// <summary>
-        /// Complete key exchange and return session key + IV
-        /// </summary>
-        public (byte[] sessionKey, byte[] iv) PerformKeyExchange(byte[] otherPartyPublicKey)
+        public byte[] DeriveSessionKeyFromExchange(byte[] otherPartyPublicKey)
         {
             try
             {
-                // Derive shared secret
+                // 1. Derive shared secret using ECDH
                 byte[] sharedSecret = DeriveSharedSecret(otherPartyPublicKey);
 
-                // Derive session key from shared secret
+                // 2. Derive session key from shared secret using KDF
                 byte[] sessionKey = DeriveSessionKey(sharedSecret);
 
-                // Generate IV
-                byte[] iv = GenerateIV();
+                // DEBUG: Log key info
+                // Console.WriteLine($"[KEY EXCHANGE] Shared secret: {BitConverter.ToString(sharedSecret).Replace("-", "").Substring(0, 16)}...");
+                // Console.WriteLine($"[KEY EXCHANGE] Session key: {BitConverter.ToString(sessionKey).Replace("-", "").Substring(0, 16)}...");
 
-                return (sessionKey, iv);
+                return sessionKey;
             }
             catch (Exception ex)
             {
@@ -144,15 +160,50 @@ namespace VPN.Core.Security
             }
         }
 
+        /// <summary>
+        /// Verify that a public key is valid
+        /// </summary>
+        public bool ValidatePublicKey(byte[] publicKey)
+        {
+            try
+            {
+                using var testDh = ECDiffieHellman.Create();
+                testDh.ImportSubjectPublicKeyInfo(publicKey, out _);
+                return true;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        private byte[] CombineArrays(params byte[][] arrays)
+        {
+            int totalLength = 0;
+            foreach (var array in arrays)
+            {
+                if (array != null)
+                    totalLength += array.Length;
+            }
+
+            byte[] result = new byte[totalLength];
+            int offset = 0;
+
+            foreach (var array in arrays)
+            {
+                if (array != null && array.Length > 0)
+                {
+                    Buffer.BlockCopy(array, 0, result, offset, array.Length);
+                    offset += array.Length;
+                }
+            }
+
+            return result;
+        }
+
         public void Dispose()
         {
             _dh?.Dispose();
-
-            // Clear sensitive data
-            if (_publicKey != null)
-            {
-                Array.Clear(_publicKey, 0, _publicKey.Length);
-            }
         }
     }
 }

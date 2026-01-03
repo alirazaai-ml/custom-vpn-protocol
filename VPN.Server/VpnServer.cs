@@ -7,6 +7,53 @@ using System.Threading.Tasks;
 
 namespace VPN.Server
 {
+    // Event delegate for client events
+    public delegate void ClientEventHandler(object sender, ClientEventArgs e);
+
+    // Event delegate for log messages
+    public delegate void LogMessageEventHandler(object sender, LogMessageEventArgs e);
+
+    // Event delegate for statistics
+    public delegate void StatisticsUpdatedEventHandler(object sender, StatisticsEventArgs e);
+
+    // Event delegate for user approval requests
+    public delegate void UserApprovalRequestEventHandler(object sender, UserApprovalRequestEventArgs e);
+
+    // Event args classes
+    public class ClientEventArgs : EventArgs
+    {
+        public string ClientId { get; set; } = string.Empty;
+        public string IpAddress { get; set; } = string.Empty;
+        public string Action { get; set; } = "connected"; // "connected" or "disconnected"
+        public DateTime Timestamp { get; set; } = DateTime.Now;
+    }
+
+    public class LogMessageEventArgs : EventArgs
+    {
+        public string Message { get; set; } = string.Empty;
+        public string Level { get; set; } = "INFO"; // "INFO", "WARN", "ERROR"
+        public DateTime Timestamp { get; set; } = DateTime.Now;
+    }
+
+    public class StatisticsEventArgs : EventArgs
+    {
+        public int ConnectedClients { get; set; }
+        public long TotalBytesForwarded { get; set; }
+        public int TotalPacketsForwarded { get; set; }
+        public TimeSpan Uptime { get; set; }
+        public int ActiveSessions { get; set; }
+        public int TotalSessions { get; set; }
+    }
+
+    // NEW: User approval request event args
+    public class UserApprovalRequestEventArgs : EventArgs
+    {
+        public string Username { get; set; } = string.Empty;
+        public string ClientId { get; set; } = string.Empty;
+        public string IpAddress { get; set; } = string.Empty;
+        public TaskCompletionSource<bool> ApprovalResult { get; set; } = new TaskCompletionSource<bool>();
+    }
+
     /// <summary>
     /// Main VPN server controller
     /// </summary>
@@ -27,6 +74,28 @@ namespace VPN.Server
         private int _totalConnections = 0;
         private DateTime _startTime;
 
+        // Connected clients tracking
+        private Dictionary<string, ClientInfo> _connectedClients = new Dictionary<string, ClientInfo>();
+
+        // Client info class
+        public class ClientInfo
+        {
+            public string ClientId { get; set; } = string.Empty;
+            public string IpAddress { get; set; } = string.Empty;
+            public DateTime ConnectedAt { get; set; } = DateTime.Now;
+            public long BytesSent { get; set; }
+            public long BytesReceived { get; set; }
+            public string Status { get; set; } = "Connected";
+            public ClientHandler? Handler { get; set; }
+        }
+
+        // Events
+        public event ClientEventHandler? ClientConnected;
+        public event ClientEventHandler? ClientDisconnected;
+        public event LogMessageEventHandler? LogMessage;
+        public event StatisticsUpdatedEventHandler? StatisticsUpdated;
+        public event UserApprovalRequestEventHandler? UserApprovalRequested; // NEW: User approval event
+
         public VpnServer(ServerConfiguration config = null)
         {
             _config = config ?? new ServerConfiguration();
@@ -42,13 +111,13 @@ namespace VPN.Server
         {
             if (_isRunning)
             {
-                Console.WriteLine("Server is already running.");
+                OnLogMessage("Server is already running.", "WARN");
                 return;
             }
 
             if (!_config.Validate())
             {
-                Console.WriteLine("Configuration validation failed. Cannot start server.");
+                OnLogMessage("Configuration validation failed. Cannot start server.", "ERROR");
                 return;
             }
 
@@ -57,6 +126,7 @@ namespace VPN.Server
                 // Initialize
                 _startTime = DateTime.Now;
                 _isRunning = true;
+                _connectedClients.Clear();
 
                 // Create TCP listener
                 IPAddress bindAddress = IPAddress.Parse(_config.BindAddress);
@@ -64,7 +134,7 @@ namespace VPN.Server
 
                 // Start listener
                 _tcpListener.Start();
-                Console.WriteLine($"VPN Server started on {bindAddress}:{_config.Port}");
+                OnLogMessage($"VPN Server started on {bindAddress}:{_config.Port}", "INFO");
 
                 // Start packet forwarder
                 _packetForwarder.Start();
@@ -79,13 +149,35 @@ namespace VPN.Server
                 _cleanupThread.IsBackground = true;
                 _cleanupThread.Start();
 
-                Console.WriteLine("VPN Server is ready and listening for connections...");
+                OnLogMessage("VPN Server is ready and listening for connections...", "INFO");
+
+                // Update statistics
+                UpdateStatistics();
+
+                // Display initial info
                 DisplayServerInfo();
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Failed to start server: {ex.Message}");
+                OnLogMessage($"Failed to start server: {ex.Message}", "ERROR");
                 Stop();
+            }
+        }
+
+        /// <summary>
+        /// Start the VPN server asynchronously
+        /// </summary>
+        public async Task<bool> StartAsync()
+        {
+            try
+            {
+                await Task.Run(() => Start());
+                return _isRunning;
+            }
+            catch (Exception ex)
+            {
+                OnLogMessage($"Failed to start server asynchronously: {ex.Message}", "ERROR");
+                return false;
             }
         }
 
@@ -96,7 +188,7 @@ namespace VPN.Server
         {
             if (!_isRunning) return;
 
-            Console.WriteLine("Stopping VPN Server...");
+            OnLogMessage("Stopping VPN Server...", "INFO");
             _isRunning = false;
             _cancellationTokenSource.Cancel();
 
@@ -107,15 +199,29 @@ namespace VPN.Server
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Error stopping listener: {ex.Message}");
+                OnLogMessage($"Error stopping listener: {ex.Message}", "ERROR");
             }
 
-            // Stop all client handlers
-            foreach (var handler in _clientHandlers.ToArray())
+            // Stop all client handlers and trigger disconnect events
+            var clientArray = _clientHandlers.ToArray();
+            foreach (var handler in clientArray)
             {
-                handler.Stop();
+                try
+                {
+                    var clientInfo = GetClientInfoByHandler(handler);
+                    if (clientInfo != null)
+                    {
+                        OnClientDisconnected(clientInfo.ClientId, clientInfo.IpAddress);
+                    }
+                    handler.Stop();
+                }
+                catch (Exception ex)
+                {
+                    OnLogMessage($"Error stopping client handler: {ex.Message}", "ERROR");
+                }
             }
             _clientHandlers.Clear();
+            _connectedClients.Clear();
 
             // Stop packet forwarder
             _packetForwarder.Stop();
@@ -124,7 +230,16 @@ namespace VPN.Server
             _listenerThread?.Join(1000);
             _cleanupThread?.Join(1000);
 
-            Console.WriteLine("VPN Server stopped.");
+            OnLogMessage("VPN Server stopped.", "INFO");
+            UpdateStatistics();
+        }
+
+        /// <summary>
+        /// Stop the VPN server asynchronously
+        /// </summary>
+        public async Task StopAsync()
+        {
+            await Task.Run(() => Stop());
         }
 
         /// <summary>
@@ -141,22 +256,30 @@ namespace VPN.Server
                     {
                         // Accept client
                         TcpClient tcpClient = _tcpListener.AcceptTcpClient();
+                        string clientIp = ((IPEndPoint)tcpClient.Client.RemoteEndPoint!).Address.ToString();
 
                         // Check if we can accept more clients
                         if (_clientHandlers.Count >= _config.MaxClients)
                         {
-                            Console.WriteLine($"Max clients ({_config.MaxClients}) reached. Rejecting connection.");
+                            OnLogMessage($"Max clients ({_config.MaxClients}) reached. Rejecting connection from {clientIp}.", "WARN");
                             tcpClient.Close();
                             continue;
                         }
 
                         // Create and start client handler
-                        var handler = new ClientHandler(tcpClient, _sessionManager, _packetForwarder, _config);
+                        var handler = new ClientHandler(tcpClient, _sessionManager, _packetForwarder, _config, this);
+
+                        // Set up handler events
+                        handler.ClientIdentified += OnClientIdentifiedHandler;
+                        handler.ClientDisconnected += OnClientDisconnectedHandler;
+                        handler.LogMessage += OnHandlerLogMessage;
+                        handler.DataTransferred += OnHandlerDataTransferred;
+
                         _clientHandlers.Add(handler);
                         handler.Start();
 
                         _totalConnections++;
-                        Console.WriteLine($"New client connected. Total connections: {_totalConnections}");
+                        OnLogMessage($"New client connected from {clientIp}. Total connections: {_totalConnections}", "INFO");
                     }
                     else
                     {
@@ -170,7 +293,7 @@ namespace VPN.Server
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Listener error: {ex.Message}");
+                OnLogMessage($"Listener error: {ex.Message}", "ERROR");
             }
         }
 
@@ -191,7 +314,7 @@ namespace VPN.Server
                     var expiredSessions = _sessionManager.RemoveExpiredSessions(_config.SessionTimeout / 1000);
                     if (expiredSessions.Count > 0)
                     {
-                        Console.WriteLine($"Cleaned up {expiredSessions.Count} expired sessions");
+                        OnLogMessage($"Cleaned up {expiredSessions.Count} expired sessions", "INFO");
                     }
 
                     // Remove disconnected client handlers
@@ -199,23 +322,110 @@ namespace VPN.Server
                     foreach (var handler in disconnectedHandlers)
                     {
                         _clientHandlers.Remove(handler);
+                        var clientInfo = GetClientInfoByHandler(handler);
+                        if (clientInfo != null)
+                        {
+                            OnClientDisconnected(clientInfo.ClientId, clientInfo.IpAddress);
+                        }
                         handler.Dispose();
                     }
 
                     if (disconnectedHandlers.Count > 0)
                     {
-                        Console.WriteLine($"Removed {disconnectedHandlers.Count} disconnected client handlers");
+                        OnLogMessage($"Removed {disconnectedHandlers.Count} disconnected client handlers", "INFO");
                     }
+
+                    // Update statistics
+                    UpdateStatistics();
                 }
                 catch (Exception ex)
                 {
-                    Console.WriteLine($"Cleanup error: {ex.Message}");
+                    OnLogMessage($"Cleanup error: {ex.Message}", "ERROR");
                 }
             }
         }
 
         /// <summary>
-        /// Get server statistics
+        /// Handle client identification from handler
+        /// </summary>
+        private void OnClientIdentifiedHandler(object? sender, ClientIdentifiedEventArgs e)
+        {
+            var clientInfo = new ClientInfo
+            {
+                ClientId = e.ClientId,
+                IpAddress = e.IpAddress,
+                ConnectedAt = e.Timestamp,
+                Status = "Connected",
+                Handler = sender as ClientHandler
+            };
+
+            lock (_connectedClients)
+            {
+                _connectedClients[e.ClientId] = clientInfo;
+            }
+
+            OnClientConnected(e.ClientId, e.IpAddress);
+        }
+
+        /// <summary>
+        /// Handle client disconnect from handler
+        /// </summary>
+        private void OnClientDisconnectedHandler(object? sender, ClientDisconnectedEventArgs e)
+        {
+            lock (_connectedClients)
+            {
+                _connectedClients.Remove(e.ClientId);
+            }
+
+            OnClientDisconnected(e.ClientId, e.IpAddress);
+        }
+
+        /// <summary>
+        /// Handle log messages from handlers
+        /// </summary>
+        private void OnHandlerLogMessage(object? sender, ClientLogMessageEventArgs e)
+        {
+            OnLogMessage($"[{e.ClientId}] {e.Message}", e.Level);
+        }
+
+        /// <summary>
+        /// Handle data transfer events from handlers
+        /// </summary>
+        private void OnHandlerDataTransferred(object? sender, ClientDataTransferEventArgs e)
+        {
+            // Update client statistics
+            lock (_connectedClients)
+            {
+                if (_connectedClients.TryGetValue(e.ClientId, out var clientInfo))
+                {
+                    clientInfo.BytesSent += e.BytesSent;
+                    clientInfo.BytesReceived += e.BytesReceived;
+                }
+            }
+
+            UpdateStatistics();
+        }
+
+        /// <summary>
+        /// Get client info by handler
+        /// </summary>
+        private ClientInfo? GetClientInfoByHandler(ClientHandler handler)
+        {
+            lock (_connectedClients)
+            {
+                foreach (var client in _connectedClients.Values)
+                {
+                    if (client.Handler == handler)
+                    {
+                        return client;
+                    }
+                }
+            }
+            return null;
+        }
+
+        /// <summary>
+        /// Display server information
         /// </summary>
         public void DisplayServerInfo()
         {
@@ -223,14 +433,17 @@ namespace VPN.Server
             var forwardStats = _packetForwarder.GetStatistics();
             var uptime = DateTime.Now - _startTime;
 
-            Console.WriteLine("\n=== VPN Server Information ===");
-            Console.WriteLine($"Uptime: {uptime:hh\\:mm\\:ss}");
-            Console.WriteLine($"Total Connections: {_totalConnections}");
-            Console.WriteLine($"Active Sessions: {stats.active}/{stats.total}");
-            Console.WriteLine($"Connected Clients: {_clientHandlers.Count}");
-            Console.WriteLine($"Total Bytes Forwarded: {forwardStats.totalBytes:N0}");
-            Console.WriteLine($"Total Packets Forwarded: {forwardStats.totalPackets:N0}");
-            Console.WriteLine("==============================\n");
+            string info = $"\n=== VPN Server Information ===\n" +
+                         $"Uptime: {uptime:hh\\:mm\\:ss}\n" +
+                         $"Total Connections: {_totalConnections}\n" +
+                         $"Active Sessions: {stats.active}/{stats.total}\n" +
+                         $"Connected Clients: {_clientHandlers.Count}\n" +
+                         $"Total Bytes Forwarded: {forwardStats.totalBytes:N0}\n" +
+                         $"Total Packets Forwarded: {forwardStats.totalPackets:N0}\n" +
+                         "==============================\n";
+
+            Console.WriteLine(info);
+            OnLogMessage(info.Trim(), "INFO");
         }
 
         /// <summary>
@@ -239,6 +452,17 @@ namespace VPN.Server
         public List<ClientHandler> GetConnectedClients()
         {
             return new List<ClientHandler>(_clientHandlers);
+        }
+
+        /// <summary>
+        /// Get connected clients information
+        /// </summary>
+        public List<ClientInfo> GetConnectedClientsInfo()
+        {
+            lock (_connectedClients)
+            {
+                return new List<ClientInfo>(_connectedClients.Values);
+            }
         }
 
         /// <summary>
@@ -260,6 +484,169 @@ namespace VPN.Server
         /// Get server uptime
         /// </summary>
         public TimeSpan GetUptime() => DateTime.Now - _startTime;
+
+        /// <summary>
+        /// Get total connections count
+        /// </summary>
+        public int TotalConnections => _totalConnections;
+
+        /// <summary>
+        /// Get current connected clients count
+        /// </summary>
+        public int ConnectedClientsCount => _clientHandlers.Count;
+
+        // ====================== EVENT TRIGGERS ======================
+
+        /// <summary>
+        /// Trigger client connected event
+        /// </summary>
+        protected virtual void OnClientConnected(string clientId, string ipAddress)
+        {
+            ClientConnected?.Invoke(this, new ClientEventArgs
+            {
+                ClientId = clientId,
+                IpAddress = ipAddress,
+                Action = "connected",
+                Timestamp = DateTime.Now
+            });
+
+            UpdateStatistics();
+        }
+
+        /// <summary>
+        /// Trigger client disconnected event
+        /// </summary>
+        protected virtual void OnClientDisconnected(string clientId, string ipAddress)
+        {
+            lock (_connectedClients)
+            {
+                _connectedClients.Remove(clientId);
+            }
+
+            ClientDisconnected?.Invoke(this, new ClientEventArgs
+            {
+                ClientId = clientId,
+                IpAddress = ipAddress,
+                Action = "disconnected",
+                Timestamp = DateTime.Now
+            });
+
+            UpdateStatistics();
+        }
+
+        /// <summary>
+        /// Trigger log message event
+        /// </summary>
+        protected virtual void OnLogMessage(string message, string level = "INFO")
+        {
+            LogMessage?.Invoke(this, new LogMessageEventArgs
+            {
+                Message = message,
+                Level = level,
+                Timestamp = DateTime.Now
+            });
+        }
+
+        /// <summary>
+        /// Update and trigger statistics event
+        /// </summary>
+        private void UpdateStatistics()
+        {
+            try
+            {
+                var stats = _sessionManager.GetSessionStatistics();
+                var forwardStats = _packetForwarder.GetStatistics();
+
+                StatisticsUpdated?.Invoke(this, new StatisticsEventArgs
+                {
+                    ConnectedClients = _clientHandlers.Count,
+                    TotalBytesForwarded = forwardStats.totalBytes,
+                    TotalPacketsForwarded = forwardStats.totalPackets,
+                    Uptime = DateTime.Now - _startTime,
+                    ActiveSessions = stats.active,
+                    TotalSessions = stats.total
+                });
+            }
+            catch (Exception ex)
+            {
+                OnLogMessage($"Error updating statistics: {ex.Message}", "ERROR");
+            }
+        }
+
+        /// <summary>
+        /// Get server statistics for dashboard
+        /// </summary>
+        public StatisticsEventArgs GetServerStatistics()
+        {
+            var stats = _sessionManager.GetSessionStatistics();
+            var forwardStats = _packetForwarder.GetStatistics();
+
+            return new StatisticsEventArgs
+            {
+                ConnectedClients = _clientHandlers.Count,
+                TotalBytesForwarded = forwardStats.totalBytes,
+                TotalPacketsForwarded = forwardStats.totalPackets,
+                Uptime = DateTime.Now - _startTime,
+                ActiveSessions = stats.active,
+                TotalSessions = stats.total
+            };
+        }
+
+        /// <summary>
+        /// Trigger user approval request event
+        /// </summary>
+        public async Task<bool> RequestUserApproval(string username, string clientId, string ipAddress)
+        {
+            try
+            {
+                OnLogMessage($"🔍 RequestUserApproval called for user: {username}", "DEBUG");
+                OnLogMessage($"🔍 ClientId: {clientId}, IP: {ipAddress}", "DEBUG");
+                
+                // ✅ Check if anyone is listening to the event
+                if (UserApprovalRequested == null)
+                {
+                    OnLogMessage($"❌ CRITICAL: No listeners for UserApprovalRequested event!", "ERROR");
+                    OnLogMessage($"❌ This means the dashboard is not properly subscribed", "ERROR");
+                    return false; // Deny by default if no one is listening
+                }
+
+                var approvalArgs = new UserApprovalRequestEventArgs
+                {
+                    Username = username,
+                    ClientId = clientId,
+                    IpAddress = ipAddress,
+                    ApprovalResult = new TaskCompletionSource<bool>()
+                };
+
+                OnLogMessage($"📡 Triggering UserApprovalRequested event...", "DEBUG");
+                
+                // Trigger event
+                UserApprovalRequested?.Invoke(this, approvalArgs);
+                
+                OnLogMessage($"⏳ Waiting for approval decision...", "DEBUG");
+
+                // Wait for approval decision with timeout
+                var timeoutTask = Task.Delay(TimeSpan.FromMinutes(5)); // 5 minute timeout
+                var completedTask = await Task.WhenAny(approvalArgs.ApprovalResult.Task, timeoutTask);
+
+                if (completedTask == timeoutTask)
+                {
+                    OnLogMessage($"⏰ Approval timeout for user '{username}' - auto-denying", "WARN");
+                    return false;
+                }
+
+                bool approved = await approvalArgs.ApprovalResult.Task;
+                
+                OnLogMessage($"✅ Approval decision received for '{username}': {approved}", "INFO");
+                return approved;
+            }
+            catch (Exception ex)
+            {
+                OnLogMessage($"❌ Error in RequestUserApproval: {ex.Message}", "ERROR");
+                OnLogMessage($"📍 Exception type: {ex.GetType().Name}", "ERROR");
+                return false; // Deny by default on error
+            }
+        }
 
         public void Dispose()
         {

@@ -13,7 +13,7 @@ using VPN.Core.Security;
 namespace VPN.Client
 {
     /// <summary>
-    /// Manages connection to VPN server
+    /// Manages connection to VPN server with auto-reconnect
     /// </summary>
     public class ConnectionManager : IDisposable
     {
@@ -30,10 +30,20 @@ namespace VPN.Client
         private int _sessionNumber = 0;
         private ConnectionStatus _connectionStatus = ConnectionStatus.Disconnected;
 
+        // Auto-reconnect settings
+        private bool _autoReconnect = true;
+        private int _reconnectAttempts = 0;
+        private const int MaxReconnectAttempts = 10;
+        private bool _isReconnecting = false;
+
         // Events
         public event EventHandler<ConnectionStatus> ConnectionStatusChanged;
         public event EventHandler<string> LogMessage;
         public event EventHandler<byte[]> DataReceived;
+
+
+        public long TotalBytesSent { get; private set; }
+        public long TotalBytesReceived { get; private set; }
 
         public ConnectionManager(ClientConfiguration config)
         {
@@ -43,7 +53,7 @@ namespace VPN.Client
         }
 
         /// <summary>
-        /// Connect to VPN server
+        /// Connect to VPN server with auto-reconnect support
         /// </summary>
         public async Task<bool> ConnectAsync()
         {
@@ -73,21 +83,15 @@ namespace VPN.Client
                 _networkStream = _tcpClient.GetStream();
 
                 // Perform handshake
+                UpdateConnectionStatus(ConnectionStatus.Authenticating);
                 bool handshakeSuccess = await PerformHandshake();
                 if (!handshakeSuccess)
                 {
                     throw new VpnException("Handshake failed", 1002);
                 }
 
-                // Perform authentication if needed
-                if (!string.IsNullOrEmpty(_config.Password))
-                {
-                    bool authSuccess = await PerformAuthentication();
-                    if (!authSuccess)
-                    {
-                        throw new VpnException("Authentication failed", 1003);
-                    }
-                }
+                // ✅ NO PASSWORD AUTHENTICATION NEEDED - Username-based only
+                // Authentication happens during handshake on server side
 
                 // Start receive thread
                 _receiveThread = new Thread(ReceiveLoop);
@@ -95,8 +99,9 @@ namespace VPN.Client
                 _receiveThread.Start();
 
                 _isConnected = true;
+                _reconnectAttempts = 0; // Reset reconnect counter on successful connection
                 UpdateConnectionStatus(ConnectionStatus.Connected);
-                Log($"Successfully connected to server. Session: {_sessionId}");
+                Log($"✅ Successfully connected to server. Session: {_sessionId}");
 
                 // Start keep-alive thread
                 StartKeepAlive();
@@ -105,11 +110,102 @@ namespace VPN.Client
             }
             catch (Exception ex)
             {
-                Log($"Connection failed: {ex.Message}");
+                Log($"❌ Connection failed: {ex.Message}");
                 UpdateConnectionStatus(ConnectionStatus.Error);
-                Disconnect();
+                
+                Disconnect("Connection failed");  // ✅ FIXED
+                
                 return false;
             }
+        }
+
+        /// <summary>
+        /// Attempt to reconnect with exponential backoff
+        /// </summary>
+        private async Task AttemptReconnect()
+        {
+            if (_isReconnecting || _reconnectAttempts >= MaxReconnectAttempts)
+                return;
+
+            _isReconnecting = true;
+
+            while (_reconnectAttempts < MaxReconnectAttempts && _autoReconnect)
+            {
+                _reconnectAttempts++;
+                int delay = GetReconnectDelay(_reconnectAttempts);
+
+                Log($"🔄 Reconnect attempt {_reconnectAttempts}/{MaxReconnectAttempts} in {delay/1000}s...");
+                UpdateConnectionStatus(ConnectionStatus.Reconnecting);
+
+                await Task.Delay(delay);
+
+                // Clean up previous connection
+                CleanupConnection();
+
+                // Try to reconnect
+                bool success = await ConnectAsync();
+                
+                if (success)
+                {
+                    Log("✅ Reconnection successful!");
+                    _isReconnecting = false;
+                    return;
+                }
+
+                if (_reconnectAttempts >= MaxReconnectAttempts)
+                {
+                    Log($"❌ Max reconnect attempts ({MaxReconnectAttempts}) reached. Giving up.");
+                    UpdateConnectionStatus(ConnectionStatus.Disconnected);
+                    break;
+                }
+            }
+
+            _isReconnecting = false;
+        }
+
+        /// <summary>
+        /// Calculate reconnect delay with exponential backoff
+        /// </summary>
+        private int GetReconnectDelay(int attempt)
+        {
+            // Exponential backoff: 1s, 2s, 4s, 8s, 16s, 30s (max)
+            int delay = (int)Math.Pow(2, attempt - 1) * 1000;
+            return Math.Min(delay, 30000); // Cap at 30 seconds
+        }
+
+        /// <summary>
+        /// Enable or disable auto-reconnect
+        /// </summary>
+        public void SetAutoReconnect(bool enabled)
+        {
+            _autoReconnect = enabled;
+            Log($"Auto-reconnect {(enabled ? "enabled" : "disabled")}");
+        }
+
+        /// <summary>
+        /// Manually trigger reconnect
+        /// </summary>
+        public async Task<bool> ReconnectAsync()
+        {
+            Log("Manual reconnect requested");
+            Disconnect("Manual reconnect");
+            await Task.Delay(1000); // Brief delay
+            return await ConnectAsync();
+        }
+
+        /// <summary>
+        /// Clean up connection resources
+        /// </summary>
+        private void CleanupConnection()
+        {
+            try
+            {
+                _cancellationTokenSource?.Cancel();
+                _receiveThread?.Join(1000);
+                _networkStream?.Close();
+                _tcpClient?.Close();
+            }
+            catch { }
         }
 
         /// <summary>
@@ -122,6 +218,7 @@ namespace VPN.Client
 
             try
             {
+                _autoReconnect = false; // Disable auto-reconnect on manual disconnect
                 UpdateConnectionStatus(ConnectionStatus.Disconnecting);
                 Log($"Disconnecting from server: {reason}");
 
@@ -132,13 +229,7 @@ namespace VPN.Client
                     SendPacket(disconnectPacket).Wait(1000);
                 }
 
-                // Cleanup
-                _cancellationTokenSource?.Cancel();
-
-                _receiveThread?.Join(1000);
-                _networkStream?.Close();
-                _tcpClient?.Close();
-
+                CleanupConnection();
                 _cryptoManager?.Dispose();
 
                 _isConnected = false;
@@ -162,6 +253,7 @@ namespace VPN.Client
             try
             {
                 Log("Performing handshake with server...");
+                Log("⏳ Waiting for server approval (if first-time user)...");
 
                 // Create handshake request
                 var handshakeRequest = new HandshakeRequest
@@ -176,8 +268,9 @@ namespace VPN.Client
                 var requestPacket = PacketBuilder.CreateHandshakeRequest(handshakeRequest);
                 await SendPacket(requestPacket);
 
-                // Receive handshake response
-                byte[] responseData = await ReceivePacketAsync();
+                // ✅ FIX: Increased timeout to 60 seconds for manual approval
+                // Receive handshake response (60 second timeout for approval)
+                byte[] responseData = await ReceivePacketAsync(60000); // 60 seconds for manual approval
                 var responsePacket = PacketSerializer.Deserialize(responseData);
 
                 if (responsePacket.Type != PacketType.HandshakeResponse)
@@ -241,10 +334,10 @@ namespace VPN.Client
                 }
 
                 // Derive session key
-                var (sessionKey, iv) = _cryptoManager.PerformKeyExchange(serverKeyPacket.Payload);
+                byte[] sessionKey = _cryptoManager.PerformKeyExchange(serverKeyPacket.Payload);
 
                 // Initialize crypto manager with session key
-                _cryptoManager.Initialize(sessionKey, iv);
+                _cryptoManager.Initialize(sessionKey);
 
                 Log("Key exchange completed successfully");
                 return true;
@@ -275,7 +368,8 @@ namespace VPN.Client
                 string json = JsonSerializer.Serialize(authData);
                 byte[] authBytes = Encoding.UTF8.GetBytes(json);
 
-                var authPacket = PacketBuilder.CreateDataPacket(_sessionNumber, authBytes);
+                // ✅ FIX: Use CreateAuthenticationPacket instead of CreateDataPacket
+                var authPacket = PacketBuilder.CreateAuthenticationPacket(_sessionNumber, authBytes);
 
                 // Encrypt if enabled
                 VpnPacket packetToSend = _config.EnableEncryption ?
@@ -374,6 +468,7 @@ namespace VPN.Client
             try
             {
                 byte[] packetData = PacketSerializer.Serialize(packet);
+                TotalBytesSent += packetData.Length; // Track upload
                 await _networkStream.WriteAsync(packetData, 0, packetData.Length, _cancellationTokenSource.Token);
                 await _networkStream.FlushAsync(_cancellationTokenSource.Token);
             }
@@ -512,6 +607,8 @@ namespace VPN.Client
                 VpnPacket decryptedPacket = _config.EnableEncryption ?
                     _cryptoManager.DecryptPacket(packet) : packet;
 
+                TotalBytesReceived += decryptedPacket.Payload.Length; // Track download
+
                 // Raise data received event
                 DataReceived?.Invoke(this, decryptedPacket.Payload);
             }
@@ -531,6 +628,17 @@ namespace VPN.Client
             await SendPacket(responsePacket);
         }
 
+
+        public async Task SendTestDataAsync()
+        {
+            if (!_isConnected)
+                return;
+
+            string testData = $"Test message from client {_config.ClientId} at {DateTime.Now}";
+            byte[] data = Encoding.UTF8.GetBytes(testData);
+            await SendDataAsync(data);
+            Log($"Sent test data: {testData}");
+        }
         /// <summary>
         /// Process disconnect packet
         /// </summary>

@@ -1,22 +1,25 @@
 ﻿using System;
 using System.IO;
+using System.Net;
+using System.Net.Sockets;
 using System.Text.Json;
 
 namespace VPN.Client
 {
     /// <summary>
-    /// Client configuration settings
+    /// Client configuration settings with auto-detection
     /// </summary>
     public class ClientConfiguration
     {
-        // Server connection
-        public string ServerIp { get; set; } = "127.0.0.1";
-        public int ServerPort { get; set; } = 5000;
+        // AUTO-DETECTED SERVER SETTINGS
+        //public string ServerIp { get; set; } = "127.0.0.1"; // Default to localhost
+        public string ServerIp { get; set; } = "YOUR_SERVER_IP_HERE"; // Use the IP shown in server logs
+        public int ServerPort { get; set; } = 5000; // Fixed port
 
-        // Client identification
+        // Client identification - ONLY username required from user
         public string ClientId { get; set; } = $"client-{Guid.NewGuid().ToString().Substring(0, 8)}";
-        public string Username { get; set; } = "user";
-        public string Password { get; set; } = ""; // Leave empty for no auth
+        public string Username { get; set; } = ""; // User enters this only
+        public string Password { get; set; } = ""; // NOT USED - kept for compatibility
 
         // Network settings
         public int BufferSize { get; set; } = 4096;
@@ -25,7 +28,7 @@ namespace VPN.Client
         public int ReconnectDelay { get; set; } = 5000;
 
         // Security
-        public bool EnableEncryption { get; set; } = true;
+        public bool EnableEncryption { get; set; } = true; // Always encrypted
         public string PreSharedKey { get; set; } = "default-key-change-me";
 
         // Tunnel settings
@@ -34,22 +37,147 @@ namespace VPN.Client
         public int LocalProxyPort { get; set; } = 1080; // SOCKS proxy port
         public string TunnelInterface { get; set; } = "VPN-Tunnel";
 
+        // System proxy auto-configuration
+        public bool AutoConfigureSystemProxy { get; set; } = true; // Auto-set Windows proxy
+
         // Logging
         public bool EnableLogging { get; set; } = true;
         public string LogFilePath { get; set; } = "vpn-client.log";
 
+        public ClientConfiguration()
+        {
+            // Auto-detect best server IP on creation
+            AutoDetectServerIp();
+        }
+
+        /// <summary>
+        /// Auto-detect the best server IP to connect to
+        /// </summary>
+        private void AutoDetectServerIp()
+        {
+            try
+            {
+                // First try localhost
+                if (TestConnection("127.0.0.1", ServerPort))
+                {
+                    ServerIp = "127.0.0.1";
+                    Console.WriteLine($"✅ Auto-detected: Server is on localhost (127.0.0.1)");
+                    return;
+                }
+
+                // Try to find local network IPs
+                string localIp = GetLocalNetworkIp();
+                if (!string.IsNullOrEmpty(localIp) && TestConnection(localIp, ServerPort))
+                {
+                    ServerIp = localIp;
+                    Console.WriteLine($"✅ Auto-detected: Server is on local network at {localIp}");
+                    return;
+                }
+
+                Console.WriteLine($"⚠️  Could not auto-detect server. Using default: {ServerIp}");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"⚠️  Server auto-detection failed: {ex.Message}. Using default: {ServerIp}");
+            }
+        }
+
+        /// <summary>
+        /// Test if server is reachable at given IP
+        /// </summary>
+        private bool TestConnection(string ip, int port, int timeout = 2000)
+        {
+            try
+            {
+                using var tcpClient = new TcpClient();
+                var connectTask = tcpClient.ConnectAsync(ip, port);
+                var timeoutTask = Task.Delay(timeout);
+
+                if (Task.WhenAny(connectTask, timeoutTask).Result == timeoutTask)
+                {
+                    return false; // Timeout
+                }
+
+                connectTask.Wait(); // Ensure connection completed
+                return tcpClient.Connected;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// Get local network IP (e.g., 192.168.x.x)
+        /// </summary>
+        private string GetLocalNetworkIp()
+        {
+            try
+            {
+                string hostName = Dns.GetHostName();
+                IPAddress[] addresses = Dns.GetHostAddresses(hostName);
+
+                foreach (IPAddress address in addresses)
+                {
+                    // Check for IPv4 local network addresses
+                    if (address.AddressFamily == AddressFamily.InterNetwork)
+                    {
+                        string ipString = address.ToString();
+                        if (ipString.StartsWith("192.168.") ||
+                            ipString.StartsWith("10.") ||
+                            ipString.StartsWith("172."))
+                        {
+                            return ipString;
+                        }
+                    }
+                }
+            }
+            catch
+            {
+                // Ignore errors
+            }
+
+            return null;
+        }
+
+        /// <summary>
+        /// Get the default config file path in user's AppData
+        /// </summary>
+        private static string GetDefaultConfigPath()
+        {
+            string appDataPath = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
+            string vpnFolder = Path.Combine(appDataPath, "VPN-Solution");
+
+            // Create directory if it doesn't exist
+            if (!Directory.Exists(vpnFolder))
+            {
+                Directory.CreateDirectory(vpnFolder);
+            }
+
+            return Path.Combine(vpnFolder, "client-config.json");
+        }
+
         /// <summary>
         /// Load configuration from JSON file
         /// </summary>
-        public static ClientConfiguration LoadFromFile(string filePath = "client-config.json")
+        public static ClientConfiguration LoadFromFile(string filePath = null)
         {
+            // Use AppData path if no path specified
+            filePath = filePath ?? GetDefaultConfigPath();
+
             try
             {
                 if (File.Exists(filePath))
                 {
                     string json = File.ReadAllText(filePath);
-                    return JsonSerializer.Deserialize<ClientConfiguration>(json)
+                    var config = JsonSerializer.Deserialize<ClientConfiguration>(json)
                         ?? new ClientConfiguration();
+                    Console.WriteLine($"✅ Configuration loaded from: {filePath}");
+
+                    // Re-run auto-detection to ensure we have the right IP
+                    config.AutoDetectServerIp();
+
+                    return config;
                 }
             }
             catch (Exception ex)
@@ -57,22 +185,35 @@ namespace VPN.Client
                 Console.WriteLine($"Warning: Could not load config: {ex.Message}");
             }
 
+            Console.WriteLine("Using default configuration...");
             return new ClientConfiguration();
         }
 
         /// <summary>
         /// Save configuration to JSON file
         /// </summary>
-        public void SaveToFile(string filePath = "client-config.json")
+        public void SaveToFile(string filePath = null)
         {
+            // Use AppData path if no path specified
+            filePath = filePath ?? GetDefaultConfigPath();
+
             try
             {
+                // Ensure directory exists
+                string directory = Path.GetDirectoryName(filePath);
+                if (!Directory.Exists(directory))
+                {
+                    Directory.CreateDirectory(directory);
+                }
+
                 string json = JsonSerializer.Serialize(this, new JsonSerializerOptions { WriteIndented = true });
                 File.WriteAllText(filePath, json);
+                Console.WriteLine($"✅ Configuration saved to: {filePath}");
             }
             catch (Exception ex)
             {
                 Console.WriteLine($"Warning: Could not save config: {ex.Message}");
+                Console.WriteLine("Client will continue with current settings...");
             }
         }
 

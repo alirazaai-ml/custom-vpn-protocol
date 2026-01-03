@@ -31,8 +31,11 @@ namespace VPN.Server
                 LastActivity = DateTime.UtcNow
             };
 
+            // Generate deterministic numeric ID from GUID
+            session.SessionIdHash = Session.GenerateNumericId(session.SessionId);
+
             _sessions[session.SessionId] = session;
-            Log($"Session created: {session.SessionId} for {clientId} from {endpoint}");
+            Log($"Created session {session.SessionId} (Hash: {session.SessionIdHash}) for client {clientId}");
 
             return session;
         }

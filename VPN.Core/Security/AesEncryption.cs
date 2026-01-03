@@ -1,102 +1,103 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Text;
-
 using System.Security.Cryptography;
 using VPN.Core.Exceptions;
 
 namespace VPN.Core.Security
 {
     /// <summary>
-    /// AES encryption/decryption implementation
+    /// AES-256 encryption implementation
     /// </summary>
-    public class AesEncryption
+    public class AesEncryption : IDisposable
     {
-        private readonly Aes _aes;
+        private const int KEY_SIZE = 256; // AES-256
+        private const int BLOCK_SIZE = 128; // AES block size
 
-        public AesEncryption()
+        public byte[] Encrypt(byte[] plaintext, byte[] key, byte[] iv)
         {
-            _aes = Aes.Create();
-            _aes.Mode = CipherMode.CBC;      // Cipher Block Chaining
-            _aes.Padding = PaddingMode.PKCS7; // PKCS7 padding
-        }
+            if (plaintext == null || plaintext.Length == 0)
+                throw new ArgumentException("Plaintext cannot be null or empty");
 
-        /// <summary>
-        /// Encrypt data using AES
-        /// </summary>
-        public byte[] Encrypt(byte[] data, byte[] key, byte[] iv)
-        {
-            try
+            if (key == null || key.Length != 32) // 32 bytes = 256 bits
+                throw new EncryptionException("Key must be 32 bytes (256 bits) for AES-256");
+
+            if (iv == null || iv.Length != 16) // 16 bytes = 128 bits
+                throw new EncryptionException("IV must be 16 bytes (128 bits) for AES");
+
+            using (var aes = Aes.Create())
             {
-                ValidateKeyAndIV(key, iv);
+                aes.KeySize = KEY_SIZE;
+                aes.BlockSize = BLOCK_SIZE;
+                aes.Key = key;
+                aes.IV = iv;
+                aes.Mode = CipherMode.CBC; // Cipher Block Chaining
+                aes.Padding = PaddingMode.PKCS7; // Standard padding
 
-                _aes.Key = key;
-                _aes.IV = iv;
-
-                using var encryptor = _aes.CreateEncryptor();
-                return encryptor.TransformFinalBlock(data, 0, data.Length);
-            }
-            catch (CryptographicException ex)
-            {
-                throw new EncryptionException("AES encryption failed", ex);
-            }
-        }
-
-        /// <summary>
-        /// Decrypt data using AES
-        /// </summary>
-        public byte[] Decrypt(byte[] encryptedData, byte[] key, byte[] iv)
-        {
-            try
-            {
-                ValidateKeyAndIV(key, iv);
-
-                _aes.Key = key;
-                _aes.IV = iv;
-
-                using var decryptor = _aes.CreateDecryptor();
-                return decryptor.TransformFinalBlock(encryptedData, 0, encryptedData.Length);
-            }
-            catch (CryptographicException ex)
-            {
-                throw new EncryptionException("AES decryption failed", ex);
+                using (var encryptor = aes.CreateEncryptor())
+                using (var ms = new System.IO.MemoryStream())
+                {
+                    using (var cs = new CryptoStream(ms, encryptor, CryptoStreamMode.Write))
+                    {
+                        cs.Write(plaintext, 0, plaintext.Length);
+                        cs.FlushFinalBlock();
+                        return ms.ToArray();
+                    }
+                }
             }
         }
 
-        /// <summary>
-        /// Generate random key for AES-256 (32 bytes = 256 bits)
-        /// </summary>
-        public byte[] GenerateKey()
+        public byte[] Decrypt(byte[] ciphertext, byte[] key, byte[] iv)
         {
-            using var rng = RandomNumberGenerator.Create();
-            byte[] key = new byte[32]; // 256 bits
-            rng.GetBytes(key);
-            return key;
-        }
+            if (ciphertext == null || ciphertext.Length == 0)
+                throw new ArgumentException("Ciphertext cannot be null or empty");
 
-        /// <summary>
-        /// Generate random IV (16 bytes for AES)
-        /// </summary>
-        public byte[] GenerateIV()
-        {
-            using var rng = RandomNumberGenerator.Create();
-            byte[] iv = new byte[16];
-            rng.GetBytes(iv);
-            return iv;
-        }
-
-        private void ValidateKeyAndIV(byte[] key, byte[] iv)
-        {
             if (key == null || key.Length != 32)
-                throw new EncryptionException("Invalid key size. Must be 32 bytes for AES-256.");
+                throw new EncryptionException("Key must be 32 bytes (256 bits) for AES-256");
 
             if (iv == null || iv.Length != 16)
-                throw new EncryptionException("Invalid IV size. Must be 16 bytes for AES.");
+                throw new EncryptionException("IV must be 16 bytes (128 bits) for AES");
+
+            using (var aes = Aes.Create())
+            {
+                aes.KeySize = KEY_SIZE;
+                aes.BlockSize = BLOCK_SIZE;
+                aes.Key = key;
+                aes.IV = iv;
+                aes.Mode = CipherMode.CBC;
+                aes.Padding = PaddingMode.PKCS7;
+
+                using (var decryptor = aes.CreateDecryptor())
+                using (var ms = new System.IO.MemoryStream(ciphertext))
+                using (var cs = new CryptoStream(ms, decryptor, CryptoStreamMode.Read))
+                using (var result = new System.IO.MemoryStream())
+                {
+                    cs.CopyTo(result);
+                    return result.ToArray();
+                }
+            }
+        }
+
+        public byte[] GenerateKey()
+        {
+            using (var aes = Aes.Create())
+            {
+                aes.KeySize = KEY_SIZE;
+                aes.GenerateKey();
+                return aes.Key;
+            }
+        }
+
+        public byte[] GenerateIV()
+        {
+            using (var aes = Aes.Create())
+            {
+                aes.GenerateIV();
+                return aes.IV;
+            }
         }
 
         public void Dispose()
         {
-            _aes?.Dispose();
+            // Nothing to dispose in this implementation
         }
     }
 }

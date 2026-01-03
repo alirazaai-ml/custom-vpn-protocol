@@ -10,6 +10,7 @@ namespace VPN.Core.Models
     public class Session
     {
         public string SessionId { get; set; } = Guid.NewGuid().ToString();
+        public int SessionIdHash { get; set; } // Numeric ID for packet headers
         public string ClientId { get; set; } = string.Empty;
         public IPEndPoint ClientEndPoint { get; set; } = null!;
 
@@ -42,6 +43,17 @@ namespace VPN.Core.Models
         public bool IsExpired(int timeoutSeconds = 300)
         {
             return IdleTime.TotalSeconds > timeoutSeconds;
+        }
+
+        /// <summary>
+        /// Generate a deterministic numeric ID from GUID
+        /// </summary>
+        public static int GenerateNumericId(string guidString)
+        {
+            // Use first 4 bytes of GUID for better distribution than GetHashCode
+            var guid = Guid.Parse(guidString);
+            byte[] bytes = guid.ToByteArray();
+            return BitConverter.ToInt32(bytes, 0);
         }
     }
 }

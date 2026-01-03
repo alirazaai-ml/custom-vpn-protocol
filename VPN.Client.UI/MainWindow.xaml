@@ -277,470 +277,441 @@
         </Border>
 
         <!-- Main Content -->
-        <Grid Grid.Row="1" Margin="15">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="1.5*"/>
-                <ColumnDefinition Width="*"/>
-            </Grid.ColumnDefinitions>
+        <!-- Main Content -->
+        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+            <Grid Margin="15">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="1.5*"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
 
-            <!-- Left Panel - Connection & Traffic -->
-            <StackPanel Grid.Column="0">
-                <!-- Connection Control Card -->
-                <Border Style="{StaticResource ModernCard}">
-                    <StackPanel>
-                        <TextBlock Text="CONNECTION CONTROL" Style="{StaticResource HeaderText}"/>
+                <!-- Left Panel - Connection & Traffic -->
+                <StackPanel Grid.Column="0">
+                    <!-- Connection Control Card -->
+                    <Border Style="{StaticResource ModernCard}">
+                        <StackPanel>
+                            <TextBlock Text="CONNECTION CONTROL" Style="{StaticResource HeaderText}"/>
 
-                        <!-- Server Configuration -->
-                        <Grid Margin="0,0,0,20">
-                            <Grid.RowDefinitions>
-                                <RowDefinition Height="Auto"/>
-                                <RowDefinition Height="Auto"/>
-                                <RowDefinition Height="Auto"/>
-                            </Grid.RowDefinitions>
+                            <!-- Server Configuration -->
+                            <Grid Margin="0,0,0,20">
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                </Grid.RowDefinitions>
 
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="Auto"/>
-                            </Grid.ColumnDefinitions>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
 
-                            <!-- Server Address -->
-                            <StackPanel Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="2" Margin="0,0,0,15">
-                                <TextBlock Text="SERVER ADDRESS" Style="{StaticResource SectionText}"/>
-                                <Border CornerRadius="8" BorderBrush="#E0E0E0" BorderThickness="2">
-                                    <TextBox x:Name="txtServerAddress" 
-                                             Text="127.0.0.1" 
-                                             Height="40" 
-                                             Padding="15" 
-                                             FontSize="14"
-                                             BorderThickness="0"/>
-                                </Border>
-                            </StackPanel>
+                                
 
-                            <!-- Port -->
-                            <StackPanel Grid.Row="0" Grid.Column="2" Margin="15,0,0,15">
-                                <TextBlock Text="PORT" Style="{StaticResource SectionText}"/>
-                                <Border CornerRadius="8" BorderBrush="#E0E0E0" BorderThickness="2">
-                                    <TextBox x:Name="txtPort" 
-                                             Text="5000" 
-                                             Height="40" 
-                                             Width="100"
-                                             Padding="15" 
-                                             FontSize="14"
-                                             BorderThickness="0"/>
-                                </Border>
-                            </StackPanel>
+                                <!-- Port -->
+                               
 
-                            <!-- Username -->
-                            <StackPanel Grid.Row="1" Grid.Column="0" Margin="0,0,10,15">
-                                <TextBlock Text="USERNAME" Style="{StaticResource SectionText}"/>
-                                <Border CornerRadius="8" BorderBrush="#E0E0E0" BorderThickness="2">
-                                    <TextBox x:Name="txtUsername" 
-                                             Text="vpn_user" 
-                                             Height="40" 
-                                             Padding="15" 
-                                             FontSize="14"
-                                             BorderThickness="0"/>
-                                </Border>
-                            </StackPanel>
-
-                            <!-- Password -->
-                            <StackPanel Grid.Row="1" Grid.Column="1" Grid.ColumnSpan="2" Margin="0,0,0,15">
-                                <TextBlock Text="PASSWORD" Style="{StaticResource SectionText}"/>
-                                <Border CornerRadius="8" BorderBrush="#E0E0E0" BorderThickness="2">
-                                    <PasswordBox x:Name="txtPassword" 
-                                                 Height="40" 
-                                                 Padding="15" 
-                                                 FontSize="14"
-                                                 BorderThickness="0"/>
-                                </Border>
-                            </StackPanel>
-
-                            <!-- Connection Buttons -->
-                            <StackPanel Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="3" 
-                                        Orientation="Horizontal" 
-                                        HorizontalAlignment="Center"
-                                        Margin="0,10,0,0">
-                                <Button x:Name="btnConnect" 
-                                        Content="🔒 CONNECT TO VPN" 
-                                        Style="{StaticResource ConnectButton}"
-                                        Width="220"
-                                        Click="btnConnect_Click"/>
-
-                                <Button x:Name="btnDisconnect" 
-                                        Content="✖ DISCONNECT" 
-                                        Style="{StaticResource DisconnectButton}"
-                                        Width="180"
-                                        Margin="20,0,0,0"
-                                        IsEnabled="False"
-                                        Click="btnDisconnect_Click"/>
-                            </StackPanel>
-                        </Grid>
-
-                        <!-- Quick Actions -->
-                        <Expander Header="Quick Actions" Margin="0,10,0,0">
-                            <StackPanel Margin="0,15,0,0">
-                                <WrapPanel>
-                                    <Button Content="Test Connection" 
-                                            Style="{StaticResource SecondaryButton}"
-                                            Margin="0,0,10,10"
-                                            Click="btnTestConnection_Click"/>
-                                    <Button Content="Ping Server" 
-                                            Style="{StaticResource SecondaryButton}"
-                                            Margin="0,0,10,10"
-                                            Click="btnPingServer_Click"/>
-                                    <Button Content="Check Encryption" 
-                                            Style="{StaticResource SecondaryButton}"
-                                            Margin="0,0,10,10"
-                                            Click="btnCheckEncryption_Click"/>
-                                    <Button Content="Speed Test" 
-                                            Style="{StaticResource SecondaryButton}"
-                                            Margin="0,0,10,10"
-                                            Click="btnSpeedTest_Click"/>
-                                    <Button Content="Reconnect" 
-                                            Style="{StaticResource SecondaryButton}"
-                                            Margin="0,0,10,10"
-                                            Click="btnReconnect_Click"/>
-                                </WrapPanel>
-                            </StackPanel>
-                        </Expander>
-                    </StackPanel>
-                </Border>
-
-                <!-- Traffic Statistics Card -->
-                <Border Style="{StaticResource ModernCard}" Margin="0,10,0,0">
-                    <Grid>
-                        <Grid.RowDefinitions>
-                            <RowDefinition Height="Auto"/>
-                            <RowDefinition Height="*"/>
-                        </Grid.RowDefinitions>
-
-                        <TextBlock Text="TRAFFIC STATISTICS" Style="{StaticResource HeaderText}"/>
-
-                        <!-- Traffic Grid -->
-                        <Grid Grid.Row="1">
-                            <Grid.RowDefinitions>
-                                <RowDefinition Height="Auto"/>
-                                <RowDefinition Height="Auto"/>
-                                <RowDefinition Height="Auto"/>
-                            </Grid.RowDefinitions>
-
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="*"/>
-                            </Grid.ColumnDefinitions>
-
-                            <!-- Upload Speed -->
-                            <Border Grid.Row="0" Grid.Column="0" 
-                                    Background="#F3E5F5" 
-                                    CornerRadius="8" 
-                                    Padding="15" 
-                                    Margin="0,0,10,10">
-                                <StackPanel>
-                                    <TextBlock Text="UPLOAD SPEED" Style="{StaticResource SectionText}"/>
-                                    <TextBlock x:Name="txtUploadSpeed" Text="0 KB/s" Style="{StaticResource MetricValue}"/>
-                                    <TextBlock x:Name="txtUploadTotal" Text="0 MB total" Style="{StaticResource SubMetric}"/>
-                                    <ProgressBar x:Name="pbUpload" 
-                                                 Height="6" 
-                                                 Margin="0,8,0,0"
-                                                 Foreground="{StaticResource Purple}"/>
-                                </StackPanel>
-                            </Border>
-
-                            <!-- Download Speed -->
-                            <Border Grid.Row="0" Grid.Column="1" 
-                                    Background="#E8F5E8" 
-                                    CornerRadius="8" 
-                                    Padding="15" 
-                                    Margin="0,0,10,10">
-                                <StackPanel>
-                                    <TextBlock Text="DOWNLOAD SPEED" Style="{StaticResource SectionText}"/>
-                                    <TextBlock x:Name="txtDownloadSpeed" Text="0 KB/s" Style="{StaticResource MetricValue}"/>
-                                    <TextBlock x:Name="txtDownloadTotal" Text="0 MB total" Style="{StaticResource SubMetric}"/>
-                                    <ProgressBar x:Name="pbDownload" 
-                                                 Height="6" 
-                                                 Margin="0,8,0,0"
-                                                 Foreground="{StaticResource Green}"/>
-                                </StackPanel>
-                            </Border>
-
-                            <!-- Latency -->
-                            <Border Grid.Row="0" Grid.Column="2" 
-                                    Background="#E3F2FD" 
-                                    CornerRadius="8" 
-                                    Padding="15" 
-                                    Margin="0,0,0,10">
-                                <StackPanel>
-                                    <TextBlock Text="LATENCY" Style="{StaticResource SectionText}"/>
-                                    <TextBlock x:Name="txtLatency" Text="-- ms" Style="{StaticResource MetricValue}"/>
-                                    <TextBlock Text="ping response" Style="{StaticResource SubMetric}"/>
-                                    <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
-                                        <Ellipse x:Name="indLatency" 
-                                                 Width="8" 
-                                                 Height="8" 
-                                                 Fill="{StaticResource Gray}" 
-                                                 Margin="0,0,5,0"/>
-                                        <TextBlock x:Name="txtLatencyStatus" Text="Unknown" 
-                                                   Style="{StaticResource SubMetric}"/>
-                                    </StackPanel>
-                                </StackPanel>
-                            </Border>
-
-                            <!-- Data Transferred -->
-                            <Border Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="3"
-                                    Background="#FFF3E0" 
-                                    CornerRadius="8" 
-                                    Padding="15" 
-                                    Margin="0,0,0,10">
-                                <Grid>
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="Auto"/>
-                                        <ColumnDefinition Width="*"/>
-                                        <ColumnDefinition Width="Auto"/>
-                                    </Grid.ColumnDefinitions>
-
-                                    <StackPanel Grid.Column="0">
-                                        <TextBlock Text="DATA TRANSFERRED" Style="{StaticResource SectionText}"/>
-                                        <TextBlock x:Name="txtDataTransferred" Text="0 MB" 
-                                                   FontSize="28" 
-                                                   FontWeight="Bold"
-                                                   Foreground="{StaticResource Black}"/>
-                                    </StackPanel>
-
-                                    <StackPanel Grid.Column="1" HorizontalAlignment="Center">
-                                        <TextBlock Text="SESSION DATA" Style="{StaticResource SectionText}"/>
-                                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
-                                            <TextBlock Text="⬆ " Style="{StaticResource MetricValue}" Foreground="{StaticResource Purple}"/>
-                                            <TextBlock x:Name="txtSessionUpload" Text="0 MB" Style="{StaticResource MetricValue}"/>
-                                            <TextBlock Text=" / " Style="{StaticResource MetricValue}" Foreground="{StaticResource Gray}"/>
-                                            <TextBlock Text="⬇ " Style="{StaticResource MetricValue}" Foreground="{StaticResource Green}"/>
-                                            <TextBlock x:Name="txtSessionDownload" Text="0 MB" Style="{StaticResource MetricValue}"/>
-                                        </StackPanel>
-                                    </StackPanel>
-
-                                    <StackPanel Grid.Column="2">
-                                        <Button Content="⟳ Reset Stats" 
-                                                Style="{StaticResource SecondaryButton}"
-                                                Click="btnResetStats_Click"/>
-                                    </StackPanel>
-                                </Grid>
-                            </Border>
-
-                            <!-- Connection Graph -->
-                            <Border Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="3"
-                                    BorderBrush="#E0E0E0" 
-                                    BorderThickness="1" 
-                                    CornerRadius="8" 
-                                    Padding="15" 
-                                    Background="{StaticResource White}">
-                                <StackPanel>
-                                    <TextBlock Text="CONNECTION GRAPH" Style="{StaticResource SectionText}"/>
-                                    <Border Height="100" 
-                                            BorderBrush="#E0E0E0" 
-                                            BorderThickness="1" 
-                                            CornerRadius="4"
-                                            Background="#FAFAFA">
-                                        <Canvas x:Name="cnvGraph">
-                                            <!-- Graph will be drawn here -->
-                                        </Canvas>
+                                <!-- Username -->
+                                <StackPanel Grid.Row="1" Grid.Column="0" Margin="0,0,10,15">
+                                    <TextBlock Text="USERNAME" Style="{StaticResource SectionText}"/>
+                                    <Border CornerRadius="8" BorderBrush="#E0E0E0" BorderThickness="2">
+                                        <TextBox x:Name="txtUsername" 
+                                         Text="vpn_user" 
+                                         Height="40" 
+                                         Padding="11" 
+                                         FontSize="14"
+                                         BorderThickness="0"
+                                         Background="Transparent"/>
                                     </Border>
-                                    <StackPanel Orientation="Horizontal" Margin="0,10,0,0">
-                                        <TextBlock Text="Real-time bandwidth visualization" 
-                                                   Style="{StaticResource SubMetric}"/>
-                                        <TextBlock Text=" | " 
-                                                   Style="{StaticResource SubMetric}" 
-                                                   Margin="5,0,5,0"/>
-                                        <TextBlock x:Name="txtGraphStatus" Text="No data" 
-                                                   Style="{StaticResource SubMetric}"/>
-                                    </StackPanel>
                                 </StackPanel>
-                            </Border>
-                        </Grid>
-                    </Grid>
-                </Border>
-            </StackPanel>
 
-            <!-- Right Panel - Status & Logs -->
-            <Grid Grid.Column="1" Margin="10,0,0,0">
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="Auto"/>
-                    <RowDefinition Height="*"/>
-                </Grid.RowDefinitions>
+                                
 
-                <!-- Connection Status Card -->
-                <Border Grid.Row="0" Style="{StaticResource ModernCard}">
-                    <StackPanel>
-                        <TextBlock Text="CONNECTION STATUS" Style="{StaticResource HeaderText}"/>
+                                <!-- Connection Buttons -->
+                                <StackPanel Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="3" 
+                                    Orientation="Horizontal" 
+                                    HorizontalAlignment="Center"
+                                    Margin="0,10,0,0">
+                                    <Button x:Name="btnConnect" 
+                                    Content="🔒 CONNECT TO VPN" 
+                                    Style="{StaticResource ConnectButton}"
+                                    Width="220"
+                                    Click="btnConnect_Click"/>
 
-                        <!-- Circular Connection Progress -->
-                        <StackPanel HorizontalAlignment="Center" Margin="0,0,0,20">
-                            <ProgressBar x:Name="pbConnection" 
-                                         Style="{StaticResource CircularProgress}"
-                                         Value="0"
-                                         Minimum="0"
-                                         Maximum="100"/>
-                            <TextBlock x:Name="txtConnectionPhase" 
-                                       Text="Ready to connect" 
-                                       HorizontalAlignment="Center" 
-                                       Margin="0,15,0,0"
-                                       FontWeight="SemiBold"/>
+                                    <Button x:Name="btnDisconnect" 
+                                    Content="✖ DISCONNECT" 
+                                    Style="{StaticResource DisconnectButton}"
+                                    Width="180"
+                                    Margin="20,0,0,0"
+                                    IsEnabled="False"
+                                    Click="btnDisconnect_Click"/>
+                                </StackPanel>
+                            </Grid>
+
+                            <!-- Quick Actions -->
+                            <Expander Header="Quick Actions" Margin="0,10,0,0">
+                                <StackPanel Margin="0,15,0,0">
+                                    <WrapPanel>
+                                        <Button Content="Test Connection" 
+                                        Style="{StaticResource SecondaryButton}"
+                                        Margin="0,0,10,10"
+                                        Click="btnTestConnection_Click"/>
+                                        <Button Content="Ping Server" 
+                                        Style="{StaticResource SecondaryButton}"
+                                        Margin="0,0,10,10"
+                                        Click="btnPingServer_Click"/>
+                                        <Button Content="Check Encryption" 
+                                        Style="{StaticResource SecondaryButton}"
+                                        Margin="0,0,10,10"
+                                        Click="btnCheckEncryption_Click"/>
+                                        <Button Content="Speed Test" 
+                                        Style="{StaticResource SecondaryButton}"
+                                        Margin="0,0,10,10"
+                                        Click="btnSpeedTest_Click"/>
+                                        <Button Content="Reconnect" 
+                                        Style="{StaticResource SecondaryButton}"
+                                        Margin="0,0,10,10"
+                                        Click="btnReconnect_Click"/>
+                                    </WrapPanel>
+                                </StackPanel>
+                            </Expander>
                         </StackPanel>
+                    </Border>
 
-                        <!-- Connection Details -->
+                    <!-- Traffic Statistics Card -->
+                    <Border Style="{StaticResource ModernCard}" Margin="0,10,0,0">
                         <Grid>
                             <Grid.RowDefinitions>
                                 <RowDefinition Height="Auto"/>
-                                <RowDefinition Height="Auto"/>
-                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="*"/>
                             </Grid.RowDefinitions>
 
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="*"/>
-                            </Grid.ColumnDefinitions>
+                            <TextBlock Text="TRAFFIC STATISTICS" Style="{StaticResource HeaderText}"/>
 
-                            <!-- Encryption -->
-                            <Border Grid.Row="0" Grid.Column="0" 
-                                    Background="#F5F5F5" 
-                                    CornerRadius="6" 
-                                    Padding="10" 
-                                    Margin="0,0,5,10">
-                                <StackPanel>
-                                    <TextBlock Text="ENCRYPTION" Style="{StaticResource SectionText}"/>
-                                    <StackPanel Orientation="Horizontal">
-                                        <Ellipse x:Name="indEncryption" 
-                                                 Width="8" 
-                                                 Height="8" 
-                                                 Fill="{StaticResource Gray}" 
-                                                 Margin="0,0,5,0"/>
-                                        <TextBlock x:Name="txtEncryption" Text="None" 
-                                                   FontWeight="SemiBold"/>
+                            <!-- Traffic Grid -->
+                            <Grid Grid.Row="1">
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                </Grid.RowDefinitions>
+
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+
+                                <!-- Upload Speed -->
+                                <Border Grid.Row="0" Grid.Column="0" 
+                                Background="#F3E5F5" 
+                                CornerRadius="8" 
+                                Padding="15" 
+                                Margin="0,0,10,10">
+                                    <StackPanel>
+                                        <TextBlock Text="UPLOAD SPEED" Style="{StaticResource SectionText}"/>
+                                        <TextBlock x:Name="txtUploadSpeed" Text="0 KB/s" Style="{StaticResource MetricValue}"/>
+                                        <TextBlock x:Name="txtUploadTotal" Text="0 MB total" Style="{StaticResource SubMetric}"/>
+                                        <ProgressBar x:Name="pbUpload" 
+                                             Height="6" 
+                                             Margin="0,8,0,0"
+                                             Foreground="{StaticResource Purple}"/>
                                     </StackPanel>
-                                </StackPanel>
-                            </Border>
+                                </Border>
 
-                            <!-- Protocol -->
-                            <Border Grid.Row="0" Grid.Column="1" 
-                                    Background="#F5F5F5" 
-                                    CornerRadius="6" 
-                                    Padding="10" 
-                                    Margin="5,0,0,10">
-                                <StackPanel>
-                                    <TextBlock Text="PROTOCOL" Style="{StaticResource SectionText}"/>
-                                    <TextBlock x:Name="txtProtocol" Text="TCP" 
-                                               FontWeight="SemiBold"/>
-                                </StackPanel>
-                            </Border>
+                                <!-- Download Speed -->
+                                <Border Grid.Row="0" Grid.Column="1" 
+                                Background="#E8F5E8" 
+                                CornerRadius="8" 
+                                Padding="15" 
+                                Margin="0,0,10,10">
+                                    <StackPanel>
+                                        <TextBlock Text="DOWNLOAD SPEED" Style="{StaticResource SectionText}"/>
+                                        <TextBlock x:Name="txtDownloadSpeed" Text="0 KB/s" Style="{StaticResource MetricValue}"/>
+                                        <TextBlock x:Name="txtDownloadTotal" Text="0 MB total" Style="{StaticResource SubMetric}"/>
+                                        <ProgressBar x:Name="pbDownload" 
+                                             Height="6" 
+                                             Margin="0,8,0,0"
+                                             Foreground="{StaticResource Green}"/>
+                                    </StackPanel>
+                                </Border>
 
-                            <!-- Session ID -->
-                            <Border Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2"
-                                    Background="#F5F5F5" 
-                                    CornerRadius="6" 
-                                    Padding="10" 
-                                    Margin="0,0,0,10">
-                                <StackPanel>
-                                    <TextBlock Text="SESSION ID" Style="{StaticResource SectionText}"/>
-                                    <TextBox x:Name="txtSessionId" 
-                                             Text="Not connected" 
-                                             IsReadOnly="True" 
-                                             BorderThickness="0" 
-                                             Background="Transparent"
-                                             FontFamily="Consolas"
-                                             FontSize="11"/>
-                                </StackPanel>
-                            </Border>
+                                <!-- Latency -->
+                                <Border Grid.Row="0" Grid.Column="2" 
+                                Background="#E3F2FD" 
+                                CornerRadius="8" 
+                                Padding="15" 
+                                Margin="0,0,0,10">
+                                    <StackPanel>
+                                        <TextBlock Text="LATENCY" Style="{StaticResource SectionText}"/>
+                                        <TextBlock x:Name="txtLatency" Text="-- ms" Style="{StaticResource MetricValue}"/>
+                                        <TextBlock Text="ping response" Style="{StaticResource SubMetric}"/>
+                                        <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
+                                            <Ellipse x:Name="indLatency" 
+                                             Width="8" 
+                                             Height="8" 
+                                             Fill="{StaticResource Gray}" 
+                                             Margin="0,0,5,0"/>
+                                            <TextBlock x:Name="txtLatencyStatus" Text="Unknown" 
+                                               Style="{StaticResource SubMetric}"/>
+                                        </StackPanel>
+                                    </StackPanel>
+                                </Border>
 
-                            <!-- Server Details -->
-                            <Border Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="2"
-                                    Background="#F5F5F5" 
-                                    CornerRadius="6" 
-                                    Padding="10">
-                                <StackPanel>
-                                    <TextBlock Text="SERVER DETAILS" Style="{StaticResource SectionText}"/>
-                                    <TextBlock x:Name="txtServerDetails" 
-                                               Text="No server connected" 
-                                               TextWrapping="Wrap"/>
-                                </StackPanel>
-                            </Border>
-                        </Grid>
-                    </StackPanel>
-                </Border>
+                                <!-- Data Transferred -->
+                                <Border Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="3"
+                                Background="#FFF3E0" 
+                                CornerRadius="8" 
+                                Padding="15" 
+                                Margin="0,0,0,10">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
 
-                <!-- Activity Log Card -->
-                <Border Grid.Row="1" Style="{StaticResource ModernCard}" Margin="0,10,0,0">
-                    <Grid>
-                        <Grid.RowDefinitions>
-                            <RowDefinition Height="Auto"/>
-                            <RowDefinition Height="*"/>
-                            <RowDefinition Height="Auto"/>
-                        </Grid.RowDefinitions>
+                                        <StackPanel Grid.Column="0">
+                                            <TextBlock Text="DATA TRANSFERRED" Style="{StaticResource SectionText}"/>
+                                            <TextBlock x:Name="txtDataTransferred" Text="0 MB" 
+                                               FontSize="28" 
+                                               FontWeight="Bold"
+                                               Foreground="{StaticResource Black}"/>
+                                        </StackPanel>
 
-                        <!-- Log Header -->
-                        <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,15">
-                            <TextBlock Text="ACTIVITY LOG" Style="{StaticResource HeaderText}"/>
+                                        <StackPanel Grid.Column="1" HorizontalAlignment="Center">
+                                            <TextBlock Text="SESSION DATA" Style="{StaticResource SectionText}"/>
+                                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                                                <TextBlock Text="⬆ " Style="{StaticResource MetricValue}" Foreground="{StaticResource Purple}"/>
+                                                <TextBlock x:Name="txtSessionUpload" Text="0 MB" Style="{StaticResource MetricValue}"/>
+                                                <TextBlock Text=" / " Style="{StaticResource MetricValue}" Foreground="{StaticResource Gray}"/>
+                                                <TextBlock Text="⬇ " Style="{StaticResource MetricValue}" Foreground="{StaticResource Green}"/>
+                                                <TextBlock x:Name="txtSessionDownload" Text="0 MB" Style="{StaticResource MetricValue}"/>
+                                            </StackPanel>
+                                        </StackPanel>
 
-                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
-                                <ComboBox x:Name="cmbLogLevel" 
-                                          Width="100" 
-                                          Margin="0,0,10,0"
-                                          SelectedIndex="0">
-                                    <ComboBoxItem Content="All Levels"/>
-                                    <ComboBoxItem Content="Info Only"/>
-                                    <ComboBoxItem Content="Warnings"/>
-                                    <ComboBoxItem Content="Errors"/>
-                                </ComboBox>
+                                        <StackPanel Grid.Column="2">
+                                            <Button Content="⟳ Reset Stats" 
+                                            Style="{StaticResource SecondaryButton}"
+                                            Click="btnResetStats_Click"/>
+                                        </StackPanel>
+                                    </Grid>
+                                </Border>
 
-                                <Button Content="CLEAR" 
-                                        Style="{StaticResource SecondaryButton}"
-                                        Click="btnClearLog_Click"/>
-                            </StackPanel>
-                        </StackPanel>
-
-                        <!-- Log Content -->
-                        <Border Grid.Row="1" 
+                                <!-- Connection Graph -->
+                                <Border Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="3"
                                 BorderBrush="#E0E0E0" 
                                 BorderThickness="1" 
-                                CornerRadius="6" 
+                                CornerRadius="8" 
+                                Padding="15" 
                                 Background="{StaticResource White}">
-                            <ScrollViewer x:Name="logScrollViewer" VerticalScrollBarVisibility="Auto">
-                                <TextBox x:Name="txtLog" 
+                                    <StackPanel>
+                                        <TextBlock Text="CONNECTION GRAPH" Style="{StaticResource SectionText}"/>
+                                        <Border Height="100" 
+                                        BorderBrush="#E0E0E0" 
+                                        BorderThickness="1" 
+                                        CornerRadius="4"
+                                        Background="#FAFAFA">
+                                            <Canvas x:Name="cnvGraph">
+                                                <!-- Graph will be drawn here -->
+                                            </Canvas>
+                                        </Border>
+                                        <StackPanel Orientation="Horizontal" Margin="0,10,0,0">
+                                            <TextBlock Text="Real-time bandwidth visualization" 
+                                               Style="{StaticResource SubMetric}"/>
+                                            <TextBlock Text=" | " 
+                                               Style="{StaticResource SubMetric}" 
+                                               Margin="5,0,5,0"/>
+                                            <TextBlock x:Name="txtGraphStatus" Text="No data" 
+                                               Style="{StaticResource SubMetric}"/>
+                                        </StackPanel>
+                                    </StackPanel>
+                                </Border>
+                            </Grid>
+                        </Grid>
+                    </Border>
+                </StackPanel>
+
+                <!-- Right Panel - Status & Logs -->
+                <Grid Grid.Column="1" Margin="10,0,0,0">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+
+                    <!-- Connection Status Card -->
+                    <Border Grid.Row="0" Style="{StaticResource ModernCard}">
+                        <StackPanel>
+                            <TextBlock Text="CONNECTION STATUS" Style="{StaticResource HeaderText}"/>
+
+                            <!-- Circular Connection Progress -->
+                            <StackPanel HorizontalAlignment="Center" Margin="0,0,0,20">
+                                <ProgressBar x:Name="pbConnection" 
+                                     Style="{StaticResource CircularProgress}"
+                                     Value="0"
+                                     Minimum="0"
+                                     Maximum="100"/>
+                                <TextBlock x:Name="txtConnectionPhase" 
+                                   Text="Ready to connect" 
+                                   HorizontalAlignment="Center" 
+                                   Margin="0,15,0,0"
+                                   FontWeight="SemiBold"/>
+                            </StackPanel>
+
+                            <!-- Connection Details -->
+                            <Grid>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                </Grid.RowDefinitions>
+
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+
+                                <!-- Encryption -->
+                                <Border Grid.Row="0" Grid.Column="0" 
+                                Background="#F5F5F5" 
+                                CornerRadius="6" 
+                                Padding="10" 
+                                Margin="0,0,5,10">
+                                    <StackPanel>
+                                        <TextBlock Text="ENCRYPTION" Style="{StaticResource SectionText}"/>
+                                        <StackPanel Orientation="Horizontal">
+                                            <Ellipse x:Name="indEncryption" 
+                                             Width="8" 
+                                             Height="8" 
+                                             Fill="{StaticResource Gray}" 
+                                             Margin="0,0,5,0"/>
+                                            <TextBlock x:Name="txtEncryption" Text="None" 
+                                               FontWeight="SemiBold"/>
+                                        </StackPanel>
+                                    </StackPanel>
+                                </Border>
+
+                                <!-- Protocol -->
+                                <Border Grid.Row="0" Grid.Column="1" 
+                                Background="#F5F5F5" 
+                                CornerRadius="6" 
+                                Padding="10" 
+                                Margin="5,0,0,10">
+                                    <StackPanel>
+                                        <TextBlock Text="PROTOCOL" Style="{StaticResource SectionText}"/>
+                                        <TextBlock x:Name="txtProtocol" Text="TCP" 
+                                           FontWeight="SemiBold"/>
+                                    </StackPanel>
+                                </Border>
+
+                                <!-- Session ID -->
+                                <Border Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2"
+                                Background="#F5F5F5" 
+                                CornerRadius="6" 
+                                Padding="10" 
+                                Margin="0,0,0,10">
+                                    <StackPanel>
+                                        <TextBlock Text="SESSION ID" Style="{StaticResource SectionText}"/>
+                                        <TextBox x:Name="txtSessionId" 
+                                         Text="Not connected" 
                                          IsReadOnly="True" 
                                          BorderThickness="0" 
                                          Background="Transparent"
-                                         FontFamily="Consolas, Courier New"
-                                         FontSize="11"
-                                         VerticalAlignment="Stretch"
-                                         TextWrapping="Wrap"
-                                         AcceptsReturn="True"
-                                         VerticalScrollBarVisibility="Hidden"
-                                         Text="[VPN Client Control Panel Started]&#x0a;Ready to establish secure connection..."/>
-                            </ScrollViewer>
-                        </Border>
+                                         FontFamily="Consolas"
+                                         FontSize="11"/>
+                                    </StackPanel>
+                                </Border>
 
-                        <!-- Log Footer -->
-                        <StackPanel Grid.Row="2" Orientation="Horizontal" Margin="0,10,0,0">
-                            <CheckBox x:Name="chkAutoScroll" 
-                                      Content="Auto-scroll" 
-                                      IsChecked="True" 
-                                      VerticalAlignment="Center"/>
-
-                            <TextBlock x:Name="txtLogEntries" 
-                                       Text="0 entries" 
-                                       Style="{StaticResource SubMetric}" 
-                                       Margin="15,0,0,0" 
-                                       VerticalAlignment="Center"/>
-
-                            <Button Content="EXPORT LOG" 
-                                    Style="{StaticResource SecondaryButton}"
-                                    Margin="15,0,0,0"
-                                    Click="btnExportLog_Click"/>
+                                <!-- Server Details -->
+                                <Border Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="2"
+                                Background="#F5F5F5" 
+                                CornerRadius="6" 
+                                Padding="10">
+                                    <StackPanel>
+                                        <TextBlock Text="SERVER DETAILS" Style="{StaticResource SectionText}"/>
+                                        <TextBlock x:Name="txtServerDetails" 
+                                           Text="No server connected" 
+                                           TextWrapping="Wrap"/>
+                                    </StackPanel>
+                                </Border>
+                            </Grid>
                         </StackPanel>
-                    </Grid>
-                </Border>
-            </Grid>
-        </Grid>
+                    </Border>
 
+                    <!-- Activity Log Card -->
+                    <Border Grid.Row="1" Style="{StaticResource ModernCard}" Margin="0,10,0,0">
+                        <Grid>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="*"/>
+                                <RowDefinition Height="Auto"/>
+                            </Grid.RowDefinitions>
+
+                            <!-- Log Header -->
+                            <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,15">
+                                <TextBlock Text="ACTIVITY LOG" Style="{StaticResource HeaderText}"/>
+
+                                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                                    <ComboBox x:Name="cmbLogLevel" 
+                                      Width="100" 
+                                      Margin="0,0,10,0"
+                                      SelectedIndex="0">
+                                        <ComboBoxItem Content="All Levels"/>
+                                        <ComboBoxItem Content="Info Only"/>
+                                        <ComboBoxItem Content="Warnings"/>
+                                        <ComboBoxItem Content="Errors"/>
+                                    </ComboBox>
+
+                                    <Button Content="CLEAR" 
+                                    Style="{StaticResource SecondaryButton}"
+                                    Click="btnClearLog_Click"/>
+                                </StackPanel>
+                            </StackPanel>
+
+                            <!-- Log Content -->
+                            <Border Grid.Row="1" 
+                            BorderBrush="#E0E0E0" 
+                            BorderThickness="1" 
+                            CornerRadius="6" 
+                            Background="{StaticResource White}">
+                                <ScrollViewer x:Name="logScrollViewer" VerticalScrollBarVisibility="Auto">
+                                    <TextBox x:Name="txtLog" 
+                                     IsReadOnly="True" 
+                                     BorderThickness="0" 
+                                     Background="Transparent"
+                                     FontFamily="Consolas, Courier New"
+                                     FontSize="11"
+                                     VerticalAlignment="Stretch"
+                                     TextWrapping="Wrap"
+                                     AcceptsReturn="True"
+                                     VerticalScrollBarVisibility="Hidden"
+                                     Text="[VPN Client Control Panel Started]&#x0a;Ready to establish secure connection..."/>
+                                </ScrollViewer>
+                            </Border>
+
+                            <!-- Log Footer -->
+                            <StackPanel Grid.Row="2" Orientation="Horizontal" Margin="0,10,0,0">
+                                <CheckBox x:Name="chkAutoScroll" 
+                                  Content="Auto-scroll" 
+                                  IsChecked="True" 
+                                  VerticalAlignment="Center"/>
+
+                                <TextBlock x:Name="txtLogEntries" 
+                                   Text="0 entries" 
+                                   Style="{StaticResource SubMetric}" 
+                                   Margin="15,0,0,0" 
+                                   VerticalAlignment="Center"/>
+
+                                <Button Content="EXPORT LOG" 
+                                Style="{StaticResource SecondaryButton}"
+                                Margin="15,0,0,0"
+                                Click="btnExportLog_Click"/>
+                            </StackPanel>
+                        </Grid>
+                    </Border>
+                </Grid>
+            </Grid>
+        </ScrollViewer>
         <!-- Footer -->
         <Border Grid.Row="2" 
                 Background="{StaticResource White}" 

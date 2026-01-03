@@ -21,6 +21,10 @@ namespace VPN.Core.Enums
         TunnelData = 0x11,            // Tunneled IP packets
 
         // Error packets
-        Error = 0xFF                  // Error notification
+        Error = 0xFF,                  // Error notification
+
+        // DNS packets
+        DnsQuery = 0x12,             // DNS query to be resolved
+        DnsResponse = 0x13            // DNS query response
     }
 }
